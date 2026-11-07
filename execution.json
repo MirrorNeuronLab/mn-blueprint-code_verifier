@@ -31,6 +31,7 @@
           "blueprint_host_worker",
           "internal_write_worker"
         ],
+        "workdir": "/sandbox/job",
         "upload_paths": [
           {
             "source": "domain",

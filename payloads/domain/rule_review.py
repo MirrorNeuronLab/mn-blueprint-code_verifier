@@ -24,6 +24,7 @@ def review_requests(rules, revision=1):
                      'rules_digest': digest, 'snapshot_id': rules['snapshot_id'],
                      'review_revision': revision, 'decision_type': 'markdown_review',
                      'interaction_kind': 'approval', 'blocking': True,
+                     'default_answer': {'option_id': 'approve'},
                      'prompt': 'Review the software rules before verification starts.',
                      'summary': f"Review {len(rules['rules'])} rules before verification",
                      'markdown_review': rule_document.reference(rules),
@@ -119,7 +120,9 @@ def review(block, inputs):
         status = _status(events, request)
         if status in {'rejected', 'expired'}:
             save(block, 'rules-review.json', {'status': status, 'rules_digest': digest})
-            raise RulesReviewRequired('Rules were not approved or the review expired. Start a new run to review them.')
+            message = ('Rule review expired. Start a new run to review the rules.' if status == 'expired'
+                       else 'Rules were not approved. Start a new run to review them.')
+            raise RulesReviewRequired(message)
         if status == 'approved':
             receipt = require_approved_rules(block, rules)
             save(block, 'rules-review.json', receipt)
@@ -149,6 +152,8 @@ def review(block, inputs):
                 raise
             events = human_interactions.read_interaction_events(block.run_id)
             status = _status(events, request)
+            if status in {'rejected', 'expired'}:
+                continue
         if status == 'revised':
             response = next(event['payload'] for event in reversed(events)
                             if event.get('type') == 'human_input_received'

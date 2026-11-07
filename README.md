@@ -53,6 +53,16 @@ normal checkout staging requires the SDK's `excluded_directories` option.
 The host-runtime agent retains its published API. Worker lifecycle and replay
 use SDK/common/blocks `>=1.3.61.dev25,<2`.
 
+Version 3.3.1 starts each HostLocal worker at its uploaded bundle root, where the
+SDK stages the compiled component code alongside the domain payload. Starting
+inside the descriptor-only `runtime/` subfolder could load a different SDK from
+the execution computer's Python environment and fail with
+`Block worker component code differs from the compiled definition`, even when
+both copies reported the same version. Activity supervision and runtime integrity
+checks remain enabled. Prepare an updated Job definition from this blueprint
+before starting a new run; existing definitions retain their working directory.
+No runtime update or reset is required.
+
 ```bash
 mn blueprint run ./code_verifier \
   --set inputs.payload.input_folder=/absolute/path/to/your/repository
@@ -94,6 +104,13 @@ stops the review. Verification makes no model calls until Core confirms approval
 of that exact version. A new run or changed content requires new approval.
 Unanswered reviews share a one-hour deadline by default
 (`review.human_review_timeout_seconds`, 1–3600 seconds).
+
+The request declares **Approve all** as its default response. OtterDesk's saved
+**Settings > General > Human input** preference can submit that default after
+15 seconds while the app is open. Keep reviewing or opening the editor stops
+automatic submission for that request. With automatic responses disabled, the
+supervisor must approve manually. Every path submits the same version-bound Core
+decision; an expired review never grants approval and requires a new run.
 
 The Markdown review requires the matching OtterDesk rule-list UI. Core and the
 existing SDK interaction transport are unchanged: a bounded request points to an

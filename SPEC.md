@@ -41,6 +41,17 @@ The five serial logical phases are capture, extract, review, verify, publish. Ea
 retain code-review policy and approval authority. Core owns routing and completion. Workers consume the native block context directly. Core execution is unchanged;
 the SDK stages folders using this blueprint's declared directory exclusions.
 
+Version 3.3.1 sets the HostLocal working directory to the uploaded bundle root
+(`/sandbox/job`, resolved by Core to the invocation workspace). The domain and
+prompt uploads share that root with the SDK-staged component code;
+`runtime/manifest.json` is the execution descriptor, not the Python package root.
+Workers must import those staged components so their identities match the
+compiled definition even when the execution computer has another SDK checkout.
+Activity supervision and the existing block integrity check stay enabled.
+Existing Job definitions require preparation from the updated blueprint before
+a new run uses this working directory. The five phases, 48 GiB Job allocation,
+model route, approval and evidence policies are unchanged.
+
 ## Rule contract
 
 Extraction, source-repair and investigation calls send their response schemas
@@ -108,7 +119,12 @@ results. The cache holds at most 2,048 entries of at most 1 MB each.
 
 Version 1.1.0 adds a mandatory review gate. Unattended runs now stop before rule
 verification until the supervisor explicitly approves the list in Chat. There
-is no configuration option or model response that can bypass this gate.
+is no model response or local approval file that can bypass this gate.
+Version 3.3.0 declares `default_answer.option_id=approve` on each review request.
+An enabled, persisted OtterDesk automatic-response preference may submit that
+default after its configured delay (15 seconds by default). The app uses the
+same Core response, revision, digest and ownership checks as a manual decision.
+Manual review remains available and stops that request's automatic response.
 
 The review specialist uses SDK `human_interactions` to publish blocking approval
 records to Core. OtterDesk's existing conversation interaction stream displays
