@@ -29,6 +29,7 @@ def response_schema(prompt):
                 'status': {'type': 'string', 'enum': ['unknown', 'pass', 'fail']},
                 'confidence': {'type': 'number', 'minimum': 0, 'maximum': 1},
                 'explanation': {**text, 'maxLength': 6000},
+                'recommended_check': {'type': 'string', 'maxLength': 800},
                 'evidence_ids': {'type': 'array', 'maxItems': 12, 'items': text},
                 'assessment': object_schema({
                     'support': {'type': 'string', 'enum': ['unresolved', 'supported', 'contradicted']},

@@ -1,8 +1,21 @@
 """Bound operator tunables before any source/model work."""
 
 from mn_sdk.blueprint.context import source_manifest
+from .source_files import relative_path
 
 BLUEPRINT_ID = source_manifest(__file__)["metadata"]["blueprint_id"]
+
+
+def spec_paths(value):
+    if not isinstance(value, str) or len(value) > 8_000:
+        raise ValueError('review.spec_paths must contain up to 8,000 characters of relative specification paths.')
+    try:
+        paths = tuple(dict.fromkeys(relative_path(path.strip()) for path in value.splitlines() if path.strip()))
+    except ValueError as error:
+        raise ValueError(f'review.spec_paths: {error}') from error
+    if len(paths) > 100:
+        raise ValueError('review.spec_paths accepts at most 100 specification paths.')
+    return paths
 
 
 def settings(block):
@@ -23,6 +36,7 @@ def settings(block):
         raise ValueError('rules_mode must be augment or replace.')
     if values.get('documentation_scope') not in {'current_requirements', 'project_docs', 'all_captured_docs'}:
         raise ValueError('documentation_scope must be current_requirements, project_docs or all_captured_docs.')
+    spec_paths(values.get('spec_paths', ''))
     return values
 
 

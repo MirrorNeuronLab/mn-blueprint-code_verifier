@@ -90,6 +90,19 @@ def policy_identity():
     return POLICY + ':' + sha256(b''.join(path.read_bytes() for path in files)).hexdigest()
 
 
+def qualifiers(rule):
+    return (rule.get('subject', ''), rule.get('scope', 'product'), rule.get('modality', ''),
+            tuple(rule.get('conditions', [])), rule.get('requirement_kind', 'behavior'))
+
+
+def merge_origins(first, duplicate):
+    origins = [{'id': duplicate['id'], 'source': duplicate['source'], 'quote': duplicate.get('quote', '')},
+               *duplicate.get('additional_origins', [])]
+    for origin in origins:
+        if origin['source'] != first['source'] and origin not in first.get('additional_origins', []):
+            first.setdefault('additional_origins', []).append(origin)
+
+
 def consolidate(rules):
     """Merge exact scoped duplicates only; flag potential conflicts, never resolve them."""
     unique, flags, signatures = {}, [], {}
@@ -97,13 +110,10 @@ def consolidate(rules):
         if rule['origin'] != 'extracted':
             unique[rule['id']] = rule
             continue
-        statement = rule['statement'].strip()
-        scope = (rule.get('subject', ''), rule.get('scope', 'product'), rule.get('modality', ''),
-                 tuple(rule.get('conditions', [])), rule.get('requirement_kind', 'behavior'))
-        key = (statement, scope)
+        key = (rule['statement'].strip(), qualifiers(rule))
         previous = signatures.get(key)
         if previous:
-            previous.setdefault('additional_origins', []).append({'id': rule['id'], 'source': rule['source'], 'quote': rule.get('quote', '')})
+            merge_origins(previous, rule)
         else:
             unique[rule['id']] = rule
             signatures[key] = rule

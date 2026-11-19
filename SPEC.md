@@ -34,8 +34,35 @@ Markdown from Job knowledge; obtain supervisor approval of the exact list in
 OtterDesk Chat; verify each approved rule independently against
 captured implementation; publish an editable Markdown list and evidence table.
 
-The first setup question requires the source code folder with no suggested or
-default path. Samples are available only by explicitly selecting their folder.
+Version 3.4.0 also accepts a prepared Git comparison as the selected local
+folder. The host-side helper reads two local commits and exports bounded source
+trees, their digests and full commit SHAs. Capture checks both staged digests.
+The folder supplies the identity of the local Git comparison. The workflow
+reads staged source and leaves program and test execution to the repository owner.
+The optional specification path list narrows extraction to exact captured
+proposed-commit documents; investigation can use all captured code.
+
+The existing approval binds the exact proposed rules, comparative capture and
+any CI receipt. Verification applies those same rules to each frozen revision,
+with changed code prioritized for retrieval. A new regression requires a base
+Pass, a proposed Fail and a cited changed implementation or configuration
+span. If the base is Unknown or the relationship to a change is unresolved,
+that distinction remains explicit. Base evidence and checkpoints are kept
+alongside proposed evidence. Plain-folder reviews retain their single snapshot.
+
+The preparation helper may attach mapped JUnit observations. Its supplied CI
+commit must exactly equal the proposed commit SHA. The receipt retains the
+JUnit filename and digest and captures only mapped test names and outcomes.
+A skipped, missing or mixed outcome remains explicit. A replaced rule statement
+requires the mapping to be reviewed again. CI evidence never changes the
+static verdict, model evidence or approval state.
+
+Start from sample data explicitly selects the bundled task app and the document
+rule mode. Personal setup starts with an empty source-folder field. Both paths
+require exact rule-list approval.
+In OtterDesk, **Use default** under **Rules to verify** confirms extraction with
+the current document scope and any custom rules. Specification paths and the
+output folder are optional settings.
 
 The five serial logical phases are capture, extract, review, verify, publish. Each phase declares a stock domain-operation block. Domain hooks
 retain code-review policy and approval authority. Core owns routing and completion. Workers consume the native block context directly. Core execution is unchanged;
@@ -89,8 +116,9 @@ and provider response counts; provider messages, credentials, prompts and source
 are excluded.
 Candidates beyond the investigation limit remain visible and receive Unknown
 rows after human review of that budget.
-Generated IDs are deterministic hashes of document path plus normalized statement;
-they are stable when both remain identical, not guaranteed across model rewrites.
+Generated IDs hash the document path, normalized statement, and distinct
+subject, scope, modality, conditions and kind. Exact duplicates retain all
+origins. A legacy ID can override a single unambiguous matching rule.
 Models select immutable source-line IDs; trusted code copies the exact captured
 text and physical span. Invalid selections receive focused corrections that
 preserve every original statement. Invented handles cannot establish references.
@@ -240,9 +268,9 @@ scope and content binding, replay, forged local receipts, Core transport and
 the guarantee that no verification model calls occur before approval.
 Live model accuracy and full installed/runtime execution are separate opt-in gates.
 
-Non-goals: automatic fixes, repository execution, dependency installation, remote
-cloning, formal verification, exhaustive language analysis, complete requirements
-discovery, test results or guarantees of conformance/safety.
+Non-goals: automatic fixes, repository and test execution, dependency
+installation, remote cloning, formal verification, exhaustive language analysis,
+complete requirements discovery or guarantees of conformance/safety.
 
 ## Report presentation
 
@@ -251,6 +279,10 @@ The blueprint owns its domain-specific views, source scope and evidence semantic
 The web page is local/offline with a minimal header, Actions dropdown, progressive
 tabs and a non-modal evidence Sheet. Presentation adds no model calls, source
 execution, external sharing, runtime changes or approval authority.
+The overview prioritizes new regressions, other failures, conflicting CI
+observations and evidence gaps. Each finding shows the approved expectation,
+source effect, suggested check when available and exact citations. The source
+viewer highlights the cited range and lets the developer inspect the full file.
 Rendering or handle-publication failures cannot prevent the authoritative
 Markdown and structured report from completing. A safe presentation status
 records the failure type without provider or source contents.
@@ -292,6 +324,12 @@ rules retain subject, scope, modality, conditions and kind. Only exact scoped
 duplicates merge, retaining all origins; potential conflicts stay visible.
 The existing human review includes exclusions, excluded candidates and scope flags.
 A supervisor rewrite clears stale extracted qualifiers and requires fresh approval.
+
+`review.spec_paths` can select captured documents using repository-relative paths
+or patterns, one per line. `docs/*.md` selects Markdown files directly in `docs/`.
+For a Git comparison, the paths resolve against the proposed snapshot. An unmatched
+selection fails before sending document text to the model. A blank setting uses
+the configured document scope.
 
 Retrieval uses offline BM25 keyword/path ranking with identifier splitting and
 existing Tree-sitter definitions, imports and caller/callee candidates. One index

@@ -12,7 +12,7 @@ Choose a local folder containing source and specifications or Markdown documenta
 
 ## Try a sample or a walkthrough
 
-For a small walkthrough, select the bundled examples/sample_inputs folder with its synthetic source and SPEC.md. Use the same source-folder selector and rule-review flow as your own project; no sample button is available. The sample does not bypass the model, preparation or approval requirements.
+Choose **Start from sample data** to use the bundled task app and its specification. Review the extracted rule list when prompted. Verification begins after you approve the saved list, just as it does for your own project.
 
 ## What you can expect
 

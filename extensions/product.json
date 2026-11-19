@@ -20,15 +20,15 @@
   },
   "product": {
     "agent_role": "Software rules reviewer",
-    "benefit": "See which expectations have implementation evidence and which need attention.",
+    "benefit": "Find documented behavior a change breaks and see how to check it.",
     "how_it_works": "Extracts rules from SPEC.md, docs and knowledge, asks the supervisor to review them in Chat, and investigates each rule only after explicit approval.",
-    "input": "Local repository checkout or plain source/docs folder; optional Markdown rules in knowledge/rules/.",
-    "output": "Editable rules.md and a Markdown table of rules, pass/fail/unknown, exact references and 0\u20131 confidence.",
+    "input": "A local source folder or a prepared Git comparison. Optional Markdown rules and mapped JUnit evidence.",
+    "output": "Editable rules and a report with prioritized findings, exact source citations and suggested checks.",
     "runtime_features": [
       "Read-only source capture",
       "Editable Markdown rules",
       "Required rule review in Chat",
-      "One investigation per rule",
+      "Git comparison",
       "Exact evidence references",
       "Explicit unknowns"
     ],

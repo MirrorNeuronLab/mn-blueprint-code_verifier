@@ -6,14 +6,22 @@ from .source_policy import evidence_paths, project_map, source_role
 
 
 class EvidenceWorkspace:
-    def __init__(self, sources, analysis):
+    def __init__(self, sources, analysis, *, changed_paths=()):
         self.sources = sources
         self.index = TextSearchIndex(sources)
         self.syntax = SyntaxIndex.from_analysis(analysis, sources)
         self.map = project_map(sources, analysis)
+        self.changed_paths = frozenset(changed_paths)
 
     def rank(self, rule, query):
-        preferred = self.index.rank(query, paths=evidence_paths(rule, self.sources), limit=8)
+        eligible = evidence_paths(rule, self.sources)
+        preferred = self.index.rank(query, paths=eligible, limit=8)
+        if self.changed_paths:
+            changed = self.index.rank(query, paths=[path for path in eligible if path in self.changed_paths], limit=2)
+            matches = {}
+            for hit in [*changed['matches'], *preferred['matches']]:
+                matches.setdefault((hit['path'], hit['start_line'], hit['end_line']), hit)
+            preferred['matches'] = list(matches.values())[:8]
         return {**preferred, 'scope': 'rule_implementation',
                 'other_captured_matches': self.index.rank(query, limit=4)['matches']}
 

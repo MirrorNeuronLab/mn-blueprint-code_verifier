@@ -7,7 +7,7 @@
       "path_kind": "directory",
       "required": true,
       "privacy": "confidential",
-      "description": "Repository checkout or plain source/docs folder, staged by the platform."
+      "description": "Repository checkout, source and docs folder, or prepared Git comparison, staged by the platform."
     },
     "supervisor_instructions": {
       "type": "array",
@@ -77,6 +77,13 @@
         "path": "capture.json",
         "mime_type": "application/json",
         "required": true,
+        "privacy": "confidential"
+      },
+      {
+        "artifact_id": "baseline",
+        "path": "baseline",
+        "mime_type": "application/octet-stream",
+        "required": false,
         "privacy": "confidential"
       },
       {

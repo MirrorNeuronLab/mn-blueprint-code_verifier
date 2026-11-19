@@ -19,6 +19,12 @@ def short_title(statement):
 def document(rules):
     instructions = ['Read or edit each rule in Markdown. Approve all accepts the entire saved list '
                     'before verification starts. Saving an edit never approves the rules.']
+    if comparison := rules.get('comparison'):
+        base, head = comparison['base'], comparison['head']
+        instructions.append(f"## Git comparison\n\nCheck these rules against `{base['commit'][:12]}` and "
+                            f"`{head['commit'][:12]}`. {len(comparison['changes'])} captured files changed.")
+        if ci := comparison.get('ci'):
+            instructions.append(f"{len(ci['checks'])} CI test mappings accompany the proposed commit.")
     if not rules['rules']:
         instructions.append('## No rules identified\n\nApproval publishes a report with no conformance result.')
     for gap in rules.get('extraction_gaps', []):
@@ -32,8 +38,7 @@ def document(rules):
     selection = rules.get('documentation_selection', {})
     excluded = [*selection.get('excluded_documents', []), *selection.get('excluded_sections', [])]
     if excluded:
-        instructions.append('## Extraction scope\n\nHistorical material, tutorials and example code are recorded '
-                            'separately from current obligations. Approval accepts these exclusions:\n\n' +
+        instructions.append('## Extraction scope\n\nApproval accepts these document and section exclusions.\n\n' +
                             '\n'.join(f"- `{item['path']}`" +
                                 (f":{item['start_line']}–{item['end_line']}" if 'start_line' in item else '') +
                                 f" — {item['reason']}" for item in excluded))
@@ -104,6 +109,8 @@ def apply_edit(rules, notes, request):
     if match['statement'] != edit['markdown']:
         for key in ('subject', 'scope', 'conditions', 'modality', 'requirement_kind'):
             match.pop(key, None)  # Extracted qualifiers cannot silently govern a supervisor rewrite.
+    changed_statement = match['statement'] != edit['markdown'] or match.get('review_edit', {}).get('statement_changed', False)
     match.update(statement=edit['markdown'], title=edit['title'], origin='supervisor',
-                 review_edit={'request_id': request['request_id'], 'previous_rules_digest': request['rules_digest']})
+                 review_edit={'request_id': request['request_id'], 'previous_rules_digest': request['rules_digest'],
+                              'statement_changed': changed_statement})
     return result

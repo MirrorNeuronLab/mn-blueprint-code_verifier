@@ -68,10 +68,11 @@ mn blueprint run ./code_verifier \
   --set inputs.payload.input_folder=/absolute/path/to/your/repository
 ```
 
-In OtterDesk, hire **Code verifier**, choose the source code folder in the first
-setup question (it has no default path), and
-start the review. The runtime stages inputs and owns output delivery. Reports
-are saved beneath `~/Downloads/code-verifier/run_<timestamp>/` by
+In OtterDesk, hire **Code verifier** and choose **Start from sample data**. To
+use your own software, choose **Use your own data**, select its source folder,
+then choose **Use default** to read current requirements and include custom rules. **Configure** offers a custom document scope, file
+selection and output folder. The runtime stages inputs and owns output delivery.
+Reports are saved beneath `~/Downloads/code-verifier/run_<timestamp>/` by
 default, with authoritative artifacts in the runtime-provided run directory.
 The report writer stages declared artifacts in the SDK-provided output folder;
 the runtime copies them to Downloads after completion. `latest.html` links to
@@ -80,10 +81,65 @@ the completed run's web report in Chat to inspect it in the conversation workspa
 The page and its handle are declared worker exports, using the same publication
 contract as Drug Discovery.
 
-For a tiny synthetic input, select `code_verifier/examples/sample_inputs`
-as the source folder. It contains a name guard, a plaintext-password counterexample,
+The sample selects `@/examples/sample_inputs` and asks you to approve the
+extracted rules before verification. It contains a name guard, a plaintext-password counterexample,
 and no cancellation implementation. AI judgments remain evidence dependent;
 deterministic tests use an injected model, never live model/network access.
+
+## Review a Git change
+
+On the computer with the checkout, prepare a folder from two local commits:
+
+```bash
+python3 code_verifier/scripts/prepare_comparison.py \
+  --repo /path/to/checkout --base origin/main --head HEAD \
+  --output /tmp/code-verifier-pr
+```
+
+For a pull request, choose the base commit you want to compare, such as the
+merge base with the target branch. The helper reads tracked UTF-8 files from
+local Git objects. It ignores dirty working-tree edits and stages source
+without Git history. For a large repository, repeat `--include` for the
+relevant spec, changed code and shared source paths. Each snapshot has the
+usual file and byte limits. The output path must be a new folder.
+
+Select the prepared folder under **Source code folder**. To limit rule
+extraction, enter one proposed-commit spec path or pattern per line under
+**Specification paths**, such as `docs/retries.md` or `docs/*.md`. The latter
+selects Markdown files directly in `docs/`. Leave the field blank to use
+**Rule documents**. Via the CLI, set the same field with
+`--set review.spec_paths=docs/retries.md`. Other captured source is still
+searchable, so an investigation can follow the change into unchanged callers
+and helpers. Plain repository and source folders use the same spec selector.
+
+Review and approve the proposed-commit rules in Chat. The same rules are
+applied to both commits. A new regression requires source support on the
+base, contradicted behavior on the proposed commit, and cited evidence of
+changed source. Existing failures and differences that still need evidence
+have their own labels. The report orders findings for review, gives the
+consequence and a suggested check when available, and opens each citation
+with its lines highlighted. Use **Scope and limits** to see selected docs,
+changed paths and coverage gaps.
+
+### Attach CI evidence
+
+Save the JUnit XML from CI and a JSON mapping of approved rule IDs to test
+names. Prefer stable custom rule IDs for recurring mappings. Use the
+`classname::name` from a JUnit testcase, or `name` when it has no classname:
+
+```json
+{
+  "REJECT-EMPTY-NAME": ["tests.test_tasks.TestTask::test_rejects_empty_name"]
+}
+```
+
+Pass `--junit /path/to/report.xml --rule-map /path/to/map.json
+--ci-commit <full-sha-recorded-by-ci>` to the preparation helper. The SHA must
+match the proposed commit. The supplied file identity and mapped outcomes
+appear in the report alongside the static judgments. Skipped, missing and
+mixed test outcomes remain visible. An edited or absent rule needs a new
+mapping. Code verifier reads the supplied test observations and preserves
+their provenance. Test logs and failure output stay in the original JUnit file.
 
 ## Review before verification
 
@@ -145,6 +201,9 @@ inside a rule. No prose goes before the first rule. Examples are in
 `review.rules_mode=augment` extracts docs and adds custom rules. To edit a
 generated rule, copy its section from `rules.md` into `knowledge/rules/custom.md`
 and retain its `GEN-...` ID: the custom version overrides that rule.
+`GEN-...` IDs now include scope and conditions. An older generated ID can
+still override a single unambiguous match. When several scoped rules share
+the old ID, use the intended rule's current exported ID.
 `review.rules_mode=replace` verifies only your Markdown rules. To remove rules
 from a generated list, edit the exported `rules.md`, upload that complete list to
 `knowledge/rules/`, and use replace. Start a new run after editing knowledge;

@@ -4,7 +4,15 @@
 
 I check the rules you approve against captured source code and explain which are supported, contradicted or still unknown.
 
-Choose a local folder containing source and specifications or Markdown documentation. Choose whether to extract documentation rules plus custom rules, or verify only your custom rules. Current requirements is the normal document scope. Add persistent custom rules through this co-worker's Job knowledge rules/ folder, not saved explanation preferences.
+Choose **Start from sample data** for the bundled task app. For your own project, select a local folder containing source and specifications or Markdown documentation. Choose whether to extract documentation rules plus custom rules, or verify only your custom rules. Current requirements is the normal document scope. Add persistent custom rules through this co-worker's Job knowledge rules/ folder, not saved explanation preferences.
+
+For a Git change, select the folder created by the blueprint's
+`scripts/prepare_comparison.py` helper. Select **Specification paths** to
+focus on specific repository-relative documents. The approved rules are
+checked on the base and proposed commits. Start with **Overview** to see new
+regressions, failures and the checks to run next. Open a citation to see its
+highlighted lines. If the comparison includes JUnit evidence, **CI evidence**
+shows the mapped outcomes for the proposed commit.
 
 First expect an editable rule list in Review rules. Inspect the complete list and coverage gaps; saving an edit is separate from approving the saved revision. After approval, expect report.md with Pass, Fail or Unknown, source evidence and explanations. The co-worker never executes or edits repository code or tests.
 
@@ -12,8 +20,8 @@ Read coverage and unknowns before focusing on a Pass count. For an important rul
 
 See [the conversation guide](conversation_guide.md) for the sample or walkthrough, expected handoff and useful follow-up questions. Examples are not current findings. Ask one missing question at a time, keep confirmed answers, and answer side questions without changing settings or issuing actions.
 
-Choose a local repository checkout or source/docs folder in the first setup
-question. No source folder is selected by default. Start a run. The
+For your own project, choose a local repository checkout or source/docs folder
+when prompted. The
 co-worker reads documentation, creates rules.md, asks you to approve the rules
 in this conversation, verifies approved rules one by one, and
 writes report.md with pass/fail/unknown, exact evidence and confidence 0–1.

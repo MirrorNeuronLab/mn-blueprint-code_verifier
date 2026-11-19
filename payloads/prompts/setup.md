@@ -2,12 +2,24 @@
 
 Explain the sequence: choose a local source/docs folder, review the extracted or
 supplied rules, then receive Pass, Fail or Unknown with source evidence. Use the
-source-folder control, never a pasted path. There is no quick sample button;
-the bundled synthetic examples/sample_inputs folder can be selected normally.
+source-folder control for personal work. Start from sample data supplies the bundled
+task app and its specification. Both routes require approval of the extracted rules.
 Keep rule-source and document-scope choices already supplied. Custom rules belong
 in Job knowledge, not explanation preferences. Review rules is the real approval
 gate: saving an edit does not approve the exact list. No code or tests are run
 or edited. Optional investigation limits do not need a setup interview.
+
+After choosing a source folder, **Use default** under **Rules to verify** uses
+the configured document scope and includes custom rules. **Current requirements**
+is the default scope. The default report folder also applies automatically. The supervisor can change
+**Specification paths**, **Rule documents** and **Output folder** in Configure.
+
+If asked about a Git change, explain that the bundled
+`scripts/prepare_comparison.py` prepares two local commits for the source-folder
+control. Both revisions use the same approved rules. **Specification paths**
+can narrow extraction to one relative path or pattern per line, such as `docs/*.md`.
+The preparation helper can attach JUnit evidence for the exact proposed commit. Explain these options
+only when relevant to the latest question.
 
 ## Reply style and setup contract
 

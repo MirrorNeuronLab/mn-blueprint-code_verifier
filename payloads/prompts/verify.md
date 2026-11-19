@@ -21,7 +21,7 @@ several reads; a partial span cannot establish a property of the whole function.
 not compiler bindings; unresolved imported/member/dynamic calls remain gaps. Exact IDs persist in the
 catalog when working observations compact; reread an old span if its text is no longer available.
 You have at most six investigation calls by default; judge and independent critique calls are reserved.
-Return a finish decision with status, confidence, explanation, evidence_ids and assessment.
+Return a finish decision with status, confidence, explanation, recommended_check, evidence_ids and assessment.
 assessment contains support (supported/contradicted/unresolved), scope_matches, conditions_checked,
 requirement_kind (behavior/configuration/source_structure), enforcement_evidence_ids,
 missing_evidence and reason_code (insufficient_evidence/parser_gap/capture_gap/ambiguous_rule/runtime_evidence_required).
@@ -35,4 +35,7 @@ conditions and exceptions; a client tutorial is not a server obligation. Never f
 A fail needs a concrete contradictory path in the actual scoped implementation, not a different import/name.
 Universal, performance, timing and runtime-only claims normally need unknown. Expose parser/binding gaps.
 Confidence is an uncalibrated assessment, capped at 0.85 for static pass/fail and 0.49 for unknown.
-Give a concise evidence-based rationale, remaining gap and practical next step; do not invent observations.
+Describe the visible effect of the cited code and the condition that triggers it in explanation.
+For fail or unknown, use recommended_check for one concrete regression test or inspection with its input,
+trigger and expected observation. Use an empty string when a test or inspection would be speculative.
+Describe proposed checks in plain language. Never claim a check ran or emit executable commands.

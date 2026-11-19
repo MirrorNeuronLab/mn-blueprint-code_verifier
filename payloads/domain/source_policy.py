@@ -4,6 +4,7 @@ from pathlib import PurePosixPath
 
 GENERATED = frozenset({'benchmark-results', 'benchmark_results', 'test-results',
                        'test_results', 'playwright-report', 'coverage'})
+CONFIG_EXTENSIONS = {'.json', '.yaml', '.yml', '.toml', '.ini', '.cfg'}
 
 
 def source_role(path):
@@ -14,27 +15,35 @@ def source_role(path):
     if path.startswith('knowledge/') or suffix in {'.md', '.rst', '.txt'}:
         return 'documentation'
     if any(p in {'test', 'tests', '__tests__', 'fixtures', '__fixtures__'} for p in parts[:-1]) or any(
-            token in name for token in ('test_', '.test.', '.spec.', '_test.')):
+            token in name for token in ('.test.', '.spec.', '_test.')) or name.startswith('test_'):
         return 'test_source'
     if any(p in {'example', 'examples', 'samples', 'tutorials'} for p in parts[:-1]):
         return 'example'
-    if suffix in {'.json', '.yaml', '.yml', '.toml', '.ini', '.cfg'}:
+    if suffix in CONFIG_EXTENSIONS:
         return 'operational_configuration'
     return 'production_source'
+
+
+def in_scope(path, scope):
+    return path == scope or path.startswith(scope.rstrip('/') + '/')
 
 
 def evidence_paths(rule, sources):
     scope = rule.get('scope', '')
     kind = rule.get('requirement_kind', 'behavior')
-    roles = {'production_source'}
-    if kind == 'configuration':
-        roles.add('operational_configuration')
-    # A scoped example/configuration is a living object, not product-wide proof.
-    if scope and scope != 'product':
-        return [p for p in sources if (p == scope or p.startswith(scope.rstrip('/') + '/'))
-                and source_role(p) in roles | {'example', 'operational_configuration'}]
-    return [p for p in sources if source_role(p) in roles or
-            (kind == 'behavior' and p.startswith('.github/workflows/') and p.endswith(('.yml', '.yaml')))]
+    scoped = bool(scope and scope != 'product')
+    eligible = []
+    for path in sources:
+        if scoped and not in_scope(path, scope):
+            continue
+        role = source_role(path)
+        suffix = PurePosixPath(path).suffix.casefold()
+        workflow = suffix in {'.yml', '.yaml'} and PurePosixPath(path).parts[-3:-1] == ('.github', 'workflows')
+        if (role == 'production_source'
+                or (role == 'operational_configuration' and (kind == 'configuration' or (workflow and kind == 'behavior')))
+                or (scoped and role == 'example' and (kind == 'configuration' or suffix not in CONFIG_EXTENSIONS))):
+            eligible.append(path)
+    return eligible
 
 
 def project_map(sources, analysis):

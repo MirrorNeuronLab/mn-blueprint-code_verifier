@@ -9,64 +9,70 @@ from mn_sdk.blueprint.inputs import capture_declared_inputs
 
 from .artifacts import read
 from .configuration import BLUEPRINT_ID, settings
+from .git_comparison import changed_files, load_bundle
+from .source_files import (DOCUMENT_EXTENSIONS, MAX_BYTES, MAX_FILES, MAX_FILE_BYTES,
+                           excluded_directory, file_exclusion, source_text)
 from .source_policy import source_role
 
-EXCLUDED = {'.git', '.svn', 'node_modules', 'vendor', 'dist', 'build', '.venv',
-            'venv', '__pycache__', '.next', 'coverage', '.idea', '.vscode'}
 TEXT_EXTENSIONS = SUPPORTED_EXTENSIONS | {'.md', '.txt', '.rst', '.json', '.yaml', '.yml',
                                         '.toml', '.ini', '.cfg', '.html', '.css', '.sql', '.sh'}
 
 
-def capture_folder(root, *, max_files=2000, max_bytes=10_000_000):
+def capture_folder(root, *, max_files=MAX_FILES, max_bytes=MAX_BYTES):
     root = Path(root).expanduser().resolve(strict=True)
     if not root.is_dir():
         raise ValueError('Choose a repository checkout or source folder.')
     sources, omitted, total, scanned = {}, [], 0, 0
     for directory, folders, files in os.walk(root, followlinks=False):
+        selected = []
         for name in sorted(folders):
             path = Path(directory) / name
-            if name.casefold() in EXCLUDED or (name.startswith('.') and path.relative_to(root).as_posix() != '.github') or path.is_symlink():
-                omitted.append({'path': path.relative_to(root).as_posix(), 'reason': 'excluded_directory_or_symlink'})
-        folders[:] = sorted(n for n in folders if (not n.startswith('.') or (Path(directory) / n).relative_to(root).as_posix() == '.github') and n.casefold() not in EXCLUDED
-                            and not (Path(directory) / n).is_symlink())
+            relative = path.relative_to(root)
+            if excluded_directory(relative) or path.is_symlink():
+                omitted.append({'path': relative.as_posix(), 'reason': 'excluded_directory_or_symlink'})
+            else:
+                selected.append(name)
+        folders[:] = selected
         scanned += len(files) + len(folders)
         if scanned > 30_000:
             raise ValueError('Source scan exceeds 30,000 entries; select a smaller folder.')
         for name in sorted(files):
             path = Path(directory) / name
-            relative = path.relative_to(root).as_posix()
-            if relative.startswith('.github/') and not (Path(relative).parent.as_posix() == '.github/workflows'
-                                                        and path.suffix.casefold() in {'.yml', '.yaml'}):
-                omitted.append({'path': relative, 'reason': 'outside_ci_capture_allowlist'})
-                continue
-            if (path.is_symlink() or name.startswith('.') or path.suffix.lower() not in TEXT_EXTENSIONS
-                    or name.casefold().startswith(('credentials', 'secrets', 'id_rsa', 'id_ed25519'))
-                    or not path.is_file()):
-                omitted.append({'path': relative, 'reason': 'excluded_format_secret_name_or_symlink'})
+            relative = path.relative_to(root)
+            reason = file_exclusion(relative, TEXT_EXTENSIONS)
+            if reason or path.is_symlink() or not path.is_file():
+                omitted.append({'path': relative.as_posix(), 'reason': reason or 'excluded_format_secret_name_or_symlink'})
                 continue
             size = path.stat().st_size
-            if size > 500_000:
-                omitted.append({'path': relative, 'reason': 'file_exceeds_500KB'})
+            if size > MAX_FILE_BYTES:
+                omitted.append({'path': relative.as_posix(), 'reason': 'file_exceeds_500KB'})
                 continue
             if len(sources) >= max_files or total + size > max_bytes:
                 raise ValueError('Source capture budget exceeded; select a smaller folder.')
             data = path.read_bytes()
-            if len(data) > 500_000 or total + len(data) > max_bytes:
+            if len(data) > MAX_FILE_BYTES or total + len(data) > max_bytes:
                 raise ValueError('Source grew beyond the capture budget.')
             try:
-                value = data.decode('utf-8')
-                if '\x00' in value:
-                    raise ValueError('binary')
-            except (UnicodeError, ValueError):
-                omitted.append({'path': relative, 'reason': 'not_utf8_text'})
+                value = source_text(data)
+            except ValueError:
+                omitted.append({'path': relative.as_posix(), 'reason': 'not_utf8_text'})
                 continue
-            sources[relative] = value
+            sources[relative.as_posix()] = value
             total += len(data)
     return sources, omitted
 
 
 def role(path):
     return source_role(path)
+
+
+def commit_snapshot(block, sources, prefix=''):
+    analysis = analyze_sources({p: v for p, v in sources.items() if Path(p).suffix in SUPPORTED_EXTENSIONS})
+    block.store.path(prefix + 'source').mkdir(parents=True, exist_ok=True)
+    for path, content in sources.items():
+        block.check()
+        block.store.commit_bytes(prefix + 'source/' + path, content.encode('utf-8'), kind='captured_source')
+    return block.store.commit(prefix + 'static-analysis.json', analysis, kind='static_analysis')
 
 
 def capture(block, inputs):
@@ -77,14 +83,14 @@ def capture(block, inputs):
         value = read(block, "capture.json")
     else:
         value = capture_sources(block, inputs)
+        if 'baseline_sources' in value:
+            baseline = block.store.commit('baseline/capture.json', value.pop('baseline_sources'), kind='baseline_capture')
+            value['baseline_capture'] = baseline.to_dict()
     sources = value["sources"]
-    analysis = analyze_sources({p: v for p, v in sources.items() if Path(p).suffix in SUPPORTED_EXTENSIONS})
-    block.store.path("source").mkdir(parents=True, exist_ok=True)
-    for path, content in sources.items():
-        block.check()
-        block.store.commit_bytes("source/" + path, content.encode("utf-8"), kind="captured_source")
+    analysis_ref = commit_snapshot(block, sources)
+    if 'baseline_capture' in value:
+        commit_snapshot(block, block.store.read(value['baseline_capture']), 'baseline/')
     capture_ref = block.store.commit("capture.json", value, kind="source_capture")
-    analysis_ref = block.store.commit("static-analysis.json", analysis, kind="static_analysis")
     return {"snapshot_id": value["snapshot_id"], "files": len(sources),
             "capture": capture_ref.to_dict(), "static_analysis": analysis_ref.to_dict()}
 
@@ -98,11 +104,24 @@ def capture_sources(block, inputs):
     run_root = block.store.run_dir
     if run_root == root or run_root.is_relative_to(root):
         raise ValueError('Run outputs must be outside the inspected source folder.')
-    sources, omitted = capture_folder(root)
-    if any(p.startswith('knowledge/') for p in sources):
+    bundle = load_bundle(root, capture_folder)
+    comparison, baseline_sources = None, {}
+    if bundle is None:
+        sources, omitted = capture_folder(root)
+    else:
+        comparison, snapshots = bundle
+        sources, baseline_sources = snapshots['head'], snapshots['base']
+        omitted = []
+    repository_prefix = ''
+    if any(p.startswith('knowledge/') for p in sources.keys() | baseline_sources.keys()):
         # Keep repository paths separate from supervisor-owned blueprint knowledge.
-        sources = {'repository/' + p: v for p, v in sources.items()}
-        omitted = [{**item, 'path': 'repository/' + item['path']} for item in omitted]
+        repository_prefix = 'repository/'
+        sources = {repository_prefix + p: v for p, v in sources.items()}
+        baseline_sources = {repository_prefix + p: v for p, v in baseline_sources.items()}
+        omitted = [{**item, 'path': repository_prefix + item['path']} for item in omitted]
+    if comparison is not None:
+        comparison['changes'] = changed_files(baseline_sources, sources)
+        comparison['base']['snapshot_id'] = TextSearchIndex(baseline_sources).snapshot_id
     knowledge = block.job_directory / 'knowledge' / 'rules'
     custom = {}
     if knowledge.is_symlink() or knowledge.parent.is_symlink():
@@ -115,9 +134,11 @@ def capture_sources(block, inputs):
             raise ValueError('Custom rules must be Markdown files.')
     sources.update({'knowledge/rules/' + p: v for p, v in custom.items()})
     index = TextSearchIndex(sources)
-    docs = [p for p in sources if Path(p).suffix.casefold() in {'.md', '.rst', '.txt'} and not p.startswith('knowledge/')]
+    docs = [p for p in sources if Path(p).suffix.casefold() in DOCUMENT_EXTENSIONS and not p.startswith('knowledge/')]
     value = {'schema_version': 'mn.software_rules.capture.v1', 'sources': sources,
              'snapshot_id': index.snapshot_id, 'documents': docs,
              'custom_documents': ['knowledge/rules/' + p for p in custom], 'omitted': omitted,
-             'source_execution': False}
+             'source_execution': False, 'repository_prefix': repository_prefix}
+    if comparison is not None:
+        value.update(comparison=comparison, baseline_sources=baseline_sources)
     return value

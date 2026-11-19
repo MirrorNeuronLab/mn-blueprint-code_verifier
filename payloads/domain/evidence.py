@@ -3,7 +3,7 @@ from hashlib import sha256
 import json
 import math
 
-from .source_policy import evidence_paths, source_role
+from .source_policy import evidence_paths, in_scope, source_role
 
 NEXT_STEPS = {
     'budget_exhausted': 'Narrow this rule or increase its investigation budget.',
@@ -44,8 +44,10 @@ def unknown(rule, explanation, history=None, *, reason='insufficient_evidence', 
 
 def admit(result, rule, index, seen):
     score, explanation, assessment = result.get('confidence'), result.get('explanation'), result.get('assessment')
+    check = result.get('recommended_check', '')
     if (type(score) not in {float, int} or not math.isfinite(score) or not 0 <= score <= 1
             or not isinstance(explanation, str) or not explanation.strip() or len(explanation) > 6000
+            or not isinstance(check, str) or len(check) > 800
             or not isinstance(assessment, dict)):
         raise ValueError('invalid_assessment: provide finite confidence and a structured assessment')
     support = assessment.get('support')
@@ -80,6 +82,12 @@ def admit(result, rule, index, seen):
     kind = rule.get('requirement_kind', assessment['requirement_kind'])
     allowed = set(evidence_paths({**rule, 'requirement_kind': kind}, index.paths))
     qualifying = [handles[h] for h in enforcement if handles[h]['path'] in allowed]
+    scope = rule.get('scope', 'product')
+    if kind == 'behavior' and scope != 'product' and not qualifying and any(
+        span['kind'] == 'operational_configuration' and in_scope(span['path'], scope) for span in admitted
+    ):
+        # A stated setting can anchor scope when the cited consumer is in another module.
+        qualifying = [handles[h] for h in enforcement if handles[h]['kind'] == 'production_source']
     # Configuration can prove a setting, but never a product behavior by itself.
     sufficient = (score >= .6 and assessment['scope_matches'] and assessment['conditions_checked']
                   and assessment['requirement_kind'] == kind
@@ -90,5 +98,6 @@ def admit(result, rule, index, seen):
     reason = assessment['reason_code'] if support == 'unresolved' else 'insufficient_evidence'
     return {'rule_id': rule['id'], 'status': status, 'confidence': min(score, .49 if status == 'unknown' else .85),
             'model_confidence': score, 'explanation': explanation, 'evidence': admitted,
+            **({'recommended_check': check.strip()} if check.strip() else {}),
             'assessment': assessment, **({'reason_code': reason, 'next_step': NEXT_STEPS[reason]} if status == 'unknown' else {}),
             'basis': 'static_review', 'tests_executed': False}

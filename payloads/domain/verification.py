@@ -12,6 +12,7 @@ from mn_code_search_skill import SyntaxIndex, TextSearchIndex
 from .artifacts import read, save
 from .configuration import BLUEPRINT_ID, settings, phase_deadline
 from .evidence import admit, bind_evidence, evidence_handle, unknown
+from .git_comparison import change_status, comparison_summary
 from .model import ask, client, failure_details
 from .retrieval import EvidenceWorkspace, compact_observations
 from .rule_review import require_approved_rules
@@ -30,14 +31,16 @@ RECOVERY = {
 
 def policy_identity(analysis):
     root = Path(__file__).parent
-    paths = [root / name for name in ('verification.py', 'evidence.py', 'retrieval.py', 'source_policy.py', 'model_contracts.py')]
+    paths = [root / name for name in ('verification.py', 'evidence.py', 'retrieval.py', 'source_policy.py',
+                                    'model_contracts.py', 'git_comparison.py')]
     paths += [root.parent / 'prompts' / name for name in ('verify.md', 'judge.md', 'critique.md')]
     return {'policy': 'scoped-static-review-v2', 'implementation': sha256(b''.join(p.read_bytes() for p in paths)).hexdigest(),
             'analysis_version': analysis['analysis_version'], 'ranking_version': TextSearchIndex.ranking_version,
             'navigation_version': SyntaxIndex.navigation_version}
 
 
-def verify_rule(block, rule, index, analysis, llm, *, files=None, deadline=float('inf'), workspace=None):
+def verify_rule(block, rule, index, analysis, llm, *, files=None, deadline=float('inf'), workspace=None,
+                revision=None):
     policy = settings(block)
     block.check()
     if time.monotonic() >= deadline:
@@ -49,6 +52,8 @@ def verify_rule(block, rule, index, analysis, llm, *, files=None, deadline=float
     packet = {'rule': rule, 'snapshot_id': index.snapshot_id, 'project_map': workspace.map,
               'candidates': candidates, 'syntax_coverage': analysis['coverage'],
               'limitations': analysis['limitations'], 'seed_reads': list(seen)}
+    if revision:
+        packet['revision_under_review'] = revision
     queries, calls, model_errors, draft = set(), 0, 0, None
 
     def request(prompt, body):
@@ -125,6 +130,7 @@ def verify_rule(block, rule, index, analysis, llm, *, files=None, deadline=float
             if checked['status'] != draft['status']:
                 draft.update(status='unknown', confidence=0.0, reason_code='reviewer_disagreement',
                              next_step='Review the cited implementation and the two assessments.')
+                draft.pop('recommended_check', None)
             else:
                 draft['confidence'] = min(draft['confidence'], checked['confidence'])
         if draft['status'] == 'unknown' and not draft['evidence']:
@@ -147,42 +153,79 @@ def verify(block, inputs, *, llm=None):
     policy = settings(block)
     deadline = phase_deadline(policy, 'verification_timeout_seconds')
     rules, analysis = read(block, 'rules.json'), read(block, 'static-analysis.json')
-    workspace = EvidenceWorkspace(capture['sources'], analysis)
+    comparison = capture.get('comparison')
+    if rules.get('comparison') != comparison:
+        raise ValueError('The saved rules and Git comparison do not match.')
+    changed_paths = {item['path'] for item in comparison['changes']} if comparison else set()
+    workspace = EvidenceWorkspace(capture['sources'], analysis, changed_paths=changed_paths)
     index = workspace.index
     if rules['snapshot_id'] != index.snapshot_id:
         raise ValueError('Rules and captured source do not match.')
     approval = require_approved_rules(block, rules)
     identity = {**policy_identity(analysis), 'rules_digest': approval['rules_digest']}
+    baseline = None
+    if comparison:
+        base_analysis = read(block, 'baseline/static-analysis.json')
+        baseline = EvidenceWorkspace(block.store.read(capture['baseline_capture']), base_analysis,
+                                     changed_paths=changed_paths)
+        if baseline.index.snapshot_id != comparison['base']['snapshot_id']:
+            raise ValueError('The baseline source does not match the approved comparison.')
+        baseline_identity = {**policy_identity(base_analysis), 'rules_digest': approval['rules_digest']}
     results = []
-    for number, rule in enumerate(rules['rules'], 1):
+
+    def assess(number, rule, source, source_analysis, source_policy, *, side=None):
+        nonlocal llm
         block.check()
-        name = f"verification/{rule['id']}.json"
+        scope = 'base/' if side == 'base' else ''
+        name = f"verification/{scope}{rule['id']}.json"
+        snapshot_id = source.index.snapshot_id
         reuse = block.store.path(name).is_file()
         if reuse:
             value = read(block, name)
-            if value['snapshot_id'] != index.snapshot_id or value['rule'] != rule or value.get('policy') != identity:
+            if value['snapshot_id'] != snapshot_id or value['rule'] != rule or value.get('policy') != source_policy:
                 raise ValueError('Saved verification uses different rules, source or analysis policy. Start a fresh run.')
             result = value['result']
             reuse = not (result.get('reason_code') == 'model_unavailable' and not result.get('investigation'))
         if not reuse:
-            report_activity(f"Checking rule {number} of {len(rules['rules'])}", kind='action',
+            revision = f' on the {side} commit' if side else ''
+            report_activity(f"Checking rule {number} of {len(rules['rules'])}{revision}", kind='action',
                             run_dir=block.store.run_dir, owner_blueprint=BLUEPRINT_ID)
             if number > policy['max_rules'] or time.monotonic() >= deadline:
                 result = unknown(rule, 'The configured investigation limit or deadline was reached; this rule was not assessed.',
                                  reason='budget_exhausted')
             else:
                 llm = llm or client()
-                result = verify_rule(block, rule, index, analysis, llm, deadline=deadline, workspace=workspace)
-            value = {'snapshot_id': index.snapshot_id, 'rule': rule, 'result': result, 'policy': identity}
+                result = verify_rule(block, rule, source.index, source_analysis, llm, deadline=deadline,
+                                     workspace=source, revision=comparison[side]['commit'] if side else None)
+            value = {'snapshot_id': snapshot_id, 'rule': rule, 'result': result, 'policy': source_policy}
         save(block, name, value)
+        return result
+
+    base_totals = Counter()
+    for number, rule in enumerate(rules['rules'], 1):
+        result = assess(number, rule, workspace, analysis, identity, side='head' if comparison else None)
+        if baseline is not None:
+            prior = assess(number, rule, baseline, base_analysis, baseline_identity, side='base')
+            base_totals.update(prior.get('diagnostics', {}))
+            cites_change = any(
+                ref['path'] in changed_paths and ref['kind'] in {'production_source', 'operational_configuration', 'example'}
+                and ref['text'] not in other.get(ref['path'], '')
+                for verdict, other in ((prior, workspace.sources), (result, baseline.sources))
+                for ref in verdict['evidence']
+            )
+            result = {**result, 'baseline': {key: value for key, value in prior.items()
+                                            if key not in {'investigation', 'diagnostics'}},
+                      'comparison_status': change_status(prior['status'], result['status'], cites_change=cites_change)}
         results.append(result)
     diagnostics = dict(Counter(r.get('reason_code') for r in results if r['status'] == 'unknown'))
     totals = Counter()
     for result in results:
         totals.update(result.get('diagnostics', {}))
-    reference = block.store.commit('verification.json', {'snapshot_id': index.snapshot_id,
+    output = {'snapshot_id': index.snapshot_id,
         'results': results, 'rules_review': approval, 'verification_policy': identity,
-        'diagnostics': {'unknown_reasons': diagnostics, **dict(totals)}},
-        kind='rule_verification')
+        'diagnostics': {'unknown_reasons': diagnostics, **dict(totals)}}
+    if comparison:
+        output['comparison'] = {'summary': comparison_summary(results), 'baseline_diagnostics': dict(base_totals)}
+    reference = block.store.commit('verification.json', output, kind='rule_verification')
     return {'verified': len(results), 'unknown': sum(r['status'] == 'unknown' for r in results),
             'capture': capture_ref, 'verification': reference.to_dict()}

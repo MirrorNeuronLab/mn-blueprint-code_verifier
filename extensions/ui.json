@@ -11,7 +11,7 @@
         "path_kind": "directory",
         "role": "input",
         "required": true,
-        "description": "Choose a local repository checkout or folder containing specifications, docs and source.",
+        "description": "Choose a repository, a folder with source and docs, or a Git comparison folder prepared for Code verifier.",
         "default": ""
       },
       {
@@ -53,6 +53,14 @@
         ]
       },
       {
+        "path": "review.spec_paths",
+        "label": "Specification paths",
+        "type": "textarea",
+        "required": false,
+        "default": "",
+        "description": "Enter one path or pattern per line, relative to the source folder, such as docs/retries.md or docs/*.md. Leave blank to use Rule documents."
+      },
+      {
         "path": "outputs.folder_path",
         "label": "Output folder",
         "type": "local_path",
@@ -81,13 +89,19 @@
   ],
   "setup_guide": {
     "schema": "otterdesk.setup_guide.v1",
-    "introduction": "I'll check your software's documented rules against source code and explain Pass, Fail or Unknown with evidence. Choose the source code folder. You'll review and approve the exact rule list before I verify it; I won't execute or edit the code.",
+    "introduction": "Try the sample task app to see how a written rule compares with its code, or choose your own source folder. You’ll review the rule list before I check it.",
     "sample": {
-      "available": false,
-      "values": {}
+      "available": true,
+      "title": "Sample task app",
+      "description": "Use the bundled task app and its short specification. You’ll approve the extracted rules before verification.",
+      "expected_output": "A rule list to approve, followed by verdicts linked to the sample code.",
+      "values": {
+        "inputs.payload.input_folder": "@/examples/sample_inputs",
+        "review.rules_mode": "augment"
+      }
     },
     "real": {
-      "introduction": "Choose a local folder containing source and requirements. I'll prepare the rules for your approval, then report the evidence and any unknowns for each approved rule.",
+      "introduction": "Choose a repository with source and requirements, then choose which rules to extract.",
       "values": {
         "inputs.payload.input_folder": ""
       }
@@ -103,6 +117,11 @@
         "description": "Managed in Memory. Changes Chat wording only; domain work and approvals keep their existing controls."
       }
     ],
-    "prompt_file": "@/payloads/prompts/setup.md"
+    "prompt_file": "@/payloads/prompts/setup.md",
+    "run_guidance": {
+      "on_start": "I’ll prepare the rule list from your selected inputs. When Review rules appears, check the wording before you approve it.",
+      "web_ui_ready": "Open the verification report, select a rule, and follow its citation to the supporting code.",
+      "output_ready": "Open report.md in the output folder to see the verdict and source evidence for each approved rule."
+    }
   }
 }

@@ -12,12 +12,20 @@ from mn_sdk.blueprint.outputs import publish_artifact_bundle, publish_files
 from .artifacts import read, save
 from .publication import deliver_reports
 from .configuration import BLUEPRINT_ID
+from .git_comparison import COMPARISON_LABELS
+from .report_findings import ci_view, decision_queue, finding_label, main_evidence, suggested_check
+from .rule_document import short_title
 from .rule_review import require_approved_rules
 
 
 def cell(value):
     value = str(value).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('\n', ' ')
     return re.sub(r'([\\`*\[\]|])', r'\\\1', value)
+
+
+def source_link(evidence, prefix='source'):
+    path, start, end = evidence['path'], evidence['start_line'], evidence['end_line']
+    return f"[{cell(path)}:{start}–{end}]({prefix}/{quote(path, safe='/')}#L{start})"
 
 
 def publish(block, inputs):
@@ -35,6 +43,12 @@ def publish(block, inputs):
     if verification.get('rules_review') != approval:
         raise ValueError('Verification does not match the approved rules.')
     counts = dict(Counter(r['status'] for r in results.values()))
+    comparison = capture.get('comparison')
+    if rules.get('comparison') != comparison or bool(comparison) != bool(verification.get('comparison')):
+        raise ValueError('Report inputs have different Git comparisons.')
+    ci = ci_view(comparison, rules['rules'])
+    queue = decision_queue(verification['results'], ci)
+    next_checks = {ident: check for ident in queue if (check := suggested_check(results[ident], ci))}
     gaps = rules.get('extraction_gaps', [])
     coverage_note = (f'Partial extraction: {len(gaps)} source sections remain unresolved. '
                      'Missing requirements have not been assessed.' if gaps else
@@ -49,20 +63,59 @@ def publish(block, inputs):
              f"Capture: `{capture['snapshot_id']}`. Rules: {len(results)}. "
              f"Pass: {counts.get('pass', 0)}. Fail: {counts.get('fail', 0)}. Unknown: {counts.get('unknown', 0)}.", '',
              'The supervisor approved these exact rules before verification started.', '',
-             coverage_note, '',
-             '| Rule | Pass or not | Evidence with reference | Confidence (0–1) |',
-             '| --- | --- | --- | --- |']
+             coverage_note, '']
+    if comparison:
+        base, head = comparison['base'], comparison['head']
+        lines += ['## Git comparison', '',
+                  f"Checked the same approved rules on `{base['commit'][:12]}` and `{head['commit'][:12]}`. "
+                  f"{len(comparison['changes'])} captured files changed.", '']
+        for status, count in verification['comparison']['summary'].items():
+            lines.append(f'- {COMPARISON_LABELS[status]} ({count})')
+        lines.append('')
+    if queue:
+        by_id = {rule['id']: rule for rule in rules['rules']}
+        lines += ['## What needs attention', '']
+        for ident in queue[:5]:
+            result, rule = results[ident], by_id[ident]
+            label = finding_label(result, ci)
+            title = rule.get('title') or short_title(rule['statement'])
+            evidence = main_evidence(result)
+            lines.append(f"- **{cell(title)}** ({label}). {cell(result['explanation'])}"
+                         + (f' {source_link(evidence)}.' if evidence else ''))
+            check = next_checks.get(ident)
+            if check:
+                lines.append(f"  Suggested check — {cell(check)}")
+        if len(queue) > 5:
+            lines.append(f'\nSee the detailed results for all {len(queue)} rules that need attention.')
+        lines.append('')
+    if ci:
+        lines += ['## Imported CI evidence', '',
+                  f"JUnit file `{cell(ci['file'])}` for `{ci['commit'][:12]}`. "
+                  'These are supplied test observations alongside the static judgments.', '',
+                  '| Rule | Test | CI result | Mapping |', '| --- | --- | --- | --- |']
+        mapping_labels = {'linked': 'Linked', 'rule_missing': 'Rule absent from this review',
+                          'rule_edited': 'Rule edited after mapping'}
+        for check in ci['checks']:
+            lines.append(f"| {cell(check['rule_id'])} | {cell(check['test'])} | {check['status'].capitalize()} | "
+                         f"{mapping_labels[check['mapping']]} |")
+        lines.append('')
+    lines += ['## Rule results', '', '| Rule | Pass or not | Evidence with reference | Confidence (0–1) |',
+              '| --- | --- | --- | --- |']
     for rule in rules['rules']:
         result = results[rule['id']]
         references = []
         for evidence in result['evidence']:
-            path = evidence['path']
-            references.append(f"[{cell(path)}:{evidence['start_line']}–{evidence['end_line']}]"
-                              f"(source/{quote(path, safe='/')}#L{evidence['start_line']}) "
-                              f"SHA-256 `{evidence['sha256']}`: {cell(evidence['quote'])}")
-        lines.append(f"| {cell(rule['id'] + ': ' + rule['statement'])} | {result['status'].capitalize()} | "
+            references.append(f"{source_link(evidence)} SHA-256 `{evidence['sha256']}`: {cell(evidence['quote'])}")
+        status = result['status'].capitalize()
+        if 'baseline' in result:
+            prior = result['baseline']
+            status += f" (base {prior['status'].capitalize()})"
+            if prior_span := main_evidence(prior):
+                references.append(f"Base evidence {source_link(prior_span, 'baseline/source')}")
+        lines.append(f"| {cell(rule['id'] + ': ' + rule['statement'])} | {status} | "
                      f"{'; '.join(references) or 'No admissible implementation evidence.'} "
-                     f"{cell(result['explanation'])} {cell(result.get('next_step', ''))} | {result['confidence']:.2f} |")
+                     f"{cell(result['explanation'])} {cell(next_checks.get(rule['id'], ''))} "
+                     f"| {result['confidence']:.2f} |")
     diagnostics = verification.get('diagnostics', {})
     lines += ['', '## Investigation coverage', '',
               f"Model calls: {diagnostics.get('model_calls', 0)}. "
@@ -105,23 +158,37 @@ def publish(block, inputs):
              'source_execution': False, 'report': 'report.md', 'rules_markdown': 'rules.md',
              'rules_review': approval,
              'diagnostics': diagnostics, 'verification_policy': verification.get('verification_policy'),
+             'attention_rule_ids': queue, 'suggested_checks': next_checks,
              'assessment_status': 'needs_review' if not rules['rules'] or gaps or counts.get('unknown') else 'complete',
              'coverage': {'documents': rules['extraction_coverage'], 'omitted': capture['omitted'],
                           'extraction_status': rules.get('extraction_status', 'complete'), 'extraction_gaps': gaps,
                           'documentation_selection': selection, 'excluded_candidates': excluded_candidates,
                           'review_flags': rules.get('review_flags', [])}}
+    if comparison:
+        final['comparison'] = {**{key: value for key, value in comparison.items() if key != 'ci'}, **verification['comparison']}
+        if any(result['comparison_status'] in {'needs_baseline', 'needs_change_evidence', 'inconclusive'}
+               for result in results.values()):
+            final['assessment_status'] = 'needs_review'
+    if ci:
+        final['ci_evidence'] = ci
     # Captured evidence is committed individually; large repositories do not
     # consume the publication bundle's limit of 128 top-level report artifacts.
     for path, content in capture["sources"].items():
         block.check()
         block.store.commit_bytes("source/" + path, content.encode("utf-8"), kind="captured_source")
+    baseline = {}
+    if comparison:
+        baseline = block.store.read(capture['baseline_capture'])
+        for path, content in baseline.items():
+            block.check()
+            block.store.commit_bytes("baseline/source/" + path, content.encode("utf-8"), kind="captured_source")
     encoded = json.dumps(final, sort_keys=True, ensure_ascii=False, allow_nan=False).encode("utf-8")
     revision = sha256(encoded).hexdigest()
 
     def page():
         try:
             from .workspace_web import render
-            return render(final, capture).encode("utf-8")
+            return render(final, capture, baseline=baseline).encode("utf-8")
         except Exception as error:
             save(block, "presentation-status.json", {"status": "unavailable", "error_type": type(error).__name__})
             raise

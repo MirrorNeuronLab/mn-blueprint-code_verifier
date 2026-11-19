@@ -1,7 +1,7 @@
 """Product policy: atomic software expectations and supervisor Markdown overrides."""
 from hashlib import sha256
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import time
 
@@ -13,7 +13,7 @@ from .artifacts import read, save, text
 from .model import ask, client, failure_details
 from .extraction_outcome import require_rule_candidates
 from .publication import deliver_reports
-from .configuration import BLUEPRINT_ID, settings, phase_deadline
+from .configuration import BLUEPRINT_ID, settings, phase_deadline, spec_paths
 from .rule_sources import (ExtractionContractError, SourceSelectionError,
                            source_lines, bind_sources, apply_source_repairs)
 from . import rule_cache
@@ -33,7 +33,29 @@ class ExtractionNotAttempted(LLMError):
     """A previous sustained outage exhausted this phase's request allowance."""
 
 
-def select_documents(capture, scope):
+def select_documents(capture, scope, paths=()):
+    if paths:
+        prefix = capture.get('repository_prefix', '')
+        # Anchor patterns to the captured repository root and match only captured documents.
+        documents = {path: PurePosixPath('/' + path) for path in capture['documents']}
+        selected, missing = {}, []
+        for selector in paths:
+            exact = prefix + selector
+            pattern = '/' + exact
+            matches = [exact] if exact in documents else [
+                path for path, document in documents.items() if document.match(pattern)
+            ]
+            if not matches:
+                missing.append(selector)
+            selected.update(dict.fromkeys(matches))
+        if missing:
+            raise ValueError(
+                f'No captured Markdown, text or reStructuredText matches {", ".join(missing)}. '
+                'Check the paths or leave Specification paths blank to use Rule documents.'
+            )
+        return {'scope': 'selected_specs', 'selected_documents': list(selected),
+                'excluded_documents': [{'path': path, 'reason': 'outside_selected_specs'}
+                                       for path in capture['documents'] if path not in selected]}
     selected, excluded = [], []
     for path in capture['documents']:
         reason = document_policy.document_reason(path, scope)
@@ -117,6 +139,38 @@ def exact_rule_source(index, packet, item):
     return index.read(packet['path'], start, end)
 
 
+def generated_id(path, statement, qualifiers=None):
+    identity = path + '\0' + statement
+    if qualifiers is not None:
+        identity += '\0' + json.dumps(qualifiers, ensure_ascii=False, separators=(',', ':'))
+    return 'GEN-' + sha256(identity.encode()).hexdigest()[:12]
+
+
+def add_candidates(rules, candidates):
+    for candidate in candidates.values():
+        ident = candidate['id']
+        if ident in rules:
+            document_policy.merge_origins(rules[ident], candidate)
+        else:
+            rules[ident] = candidate
+
+
+def apply_custom_rules(rules, custom):
+    legacy_ids = {}
+    for rule in rules.values():
+        legacy = generated_id(rule['source']['path'], rule['statement'])
+        legacy_ids.setdefault(legacy, []).append(rule['id'])
+    for ident, custom_rule in custom.items():
+        if ident not in rules and ident in legacy_ids:
+            matches = legacy_ids[ident]
+            if len(matches) != 1:
+                raise ValueError(f'Custom rule {ident} matches several scoped rules. Use a distinct exported rule ID.')
+            if matches[0] in custom:
+                raise ValueError(f'Custom rule {ident} and {matches[0]} override the same scoped rule.')
+            del rules[matches[0]]
+        rules[ident] = custom_rule
+
+
 def packet_rules(index, packet, result):
     if result.get('complete') is not True or not isinstance(result.get('rules'), list):
         raise ExtractionContractError('Return the complete rules list and complete=true; do not omit rules.')
@@ -130,7 +184,6 @@ def packet_rules(index, packet, result):
                 or quote not in span['text'] or span['start_line'] < packet['start_line']
                 or span['end_line'] > packet['end_line']):
             raise ExtractionContractError('Every rule needs a statement of at most 4 KB and an exact bounded source reference.')
-        ident = 'GEN-' + sha256((packet['path'] + '\0' + statement.strip()).encode()).hexdigest()[:12]
         metadata = {key: item[key] for key in ('subject', 'scope', 'modality', 'conditions', 'requirement_kind') if key in item}
         if metadata:
             if (any(not isinstance(metadata.get(k), str) or not 1 <= len(metadata[k]) <= 500
@@ -140,8 +193,10 @@ def packet_rules(index, packet, result):
                     or not isinstance(metadata.get('conditions'), list) or len(metadata['conditions']) > 8
                     or any(not isinstance(c, str) or len(c) > 500 for c in metadata['conditions'])):
                 raise ExtractionContractError('Preserve bounded subject, scope, modality, conditions and requirement_kind.')
-        admitted[ident] = {'id': ident, 'statement': statement.strip(), 'origin': 'extracted',
-                           'source': {k: v for k, v in span.items() if k != 'text'}, 'quote': quote, **metadata}
+        ident = generated_id(packet['path'], statement.strip(), document_policy.qualifiers(metadata))
+        candidate = {'id': ident, 'statement': statement.strip(), 'origin': 'extracted',
+                     'source': {k: v for k, v in span.items() if k != 'text'}, 'quote': quote, **metadata}
+        add_candidates(admitted, {ident: candidate})
     return admitted
 
 
@@ -342,7 +397,7 @@ def extract(block, inputs, *, llm=None):
     rules, receipts, gaps, excluded_candidates = {}, [], [], []
     selection = {'scope': 'custom_rules_only', 'selected_documents': [], 'excluded_documents': []}
     if mode == 'augment':
-        selection = select_documents(capture, policy['documentation_scope'])
+        selection = select_documents(capture, policy['documentation_scope'], spec_paths(policy.get('spec_paths', '')))
         packets = []
         selection['excluded_sections'] = []
         for path in selection['selected_documents']:
@@ -352,7 +407,7 @@ def extract(block, inputs, *, llm=None):
                 packets.append(packet)
                 if len(packets) > policy['max_extraction_packets']:
                     raise ValueError(f"Selected documentation exceeds review.max_extraction_packets="
-                                     f"{policy['max_extraction_packets']}. Choose project docs, "
+                                     f"{policy['max_extraction_packets']}. Choose fewer specification paths, "
                                      'increase the packet budget, or narrow the source folder.')
         save(block, 'extraction-plan.json', {**selection, 'packet_count': len(packets),
              'max_extraction_packets': policy['max_extraction_packets'], 'snapshot_id': index.snapshot_id})
@@ -385,9 +440,9 @@ def extract(block, inputs, *, llm=None):
             unavailable = 0
             gaps.extend(result.get('extraction_gaps', []))
             excluded_candidates.extend(result.get('excluded_candidates', []))
-            rules.update(admitted)
+            add_candidates(rules, admitted)
             receipts.append({'path': packet['path'], 'start_line': packet['start_line'], 'end_line': packet['end_line']})
-    rules.update(custom)  # A copied generated ID is an explicit supervisor override.
+    apply_custom_rules(rules, custom)
     effective, flags = document_policy.consolidate(list(rules.values()))
     result = {'schema_version': 'mn.software_rules.rules.v1', 'snapshot_id': index.snapshot_id,
               'mode': mode, 'rules': effective, 'extraction_coverage': receipts,
@@ -398,6 +453,8 @@ def extract(block, inputs, *, llm=None):
     result['extraction_status'] = ('failed' if gaps and not rules else 'needs_review' if gaps
                                    else 'complete' if rules else 'no_rules')
     result['verification_rule_limit'] = policy['max_rules']
+    if 'comparison' in capture:
+        result['comparison'] = capture['comparison']
     text(block, 'rules.md', markdown(result['rules']))
     save(block, 'rules.json', result)
     stop_failed_extraction(block, result)
