@@ -22,9 +22,13 @@ def ci_view(comparison, rules):
     return {**receipt, 'checks': checks}
 
 
+def conflicting_ci_rules(ci):
+    return {check['rule_id'] for check in (ci or {}).get('checks', [])
+            if check['mapping'] == 'linked' and check['status'] in {'failed', 'mixed'}}
+
+
 def decision_queue(results, ci):
-    flagged = {check['rule_id'] for check in (ci or {}).get('checks', [])
-               if check['mapping'] == 'linked' and check['status'] in {'failed', 'mixed'}}
+    flagged = conflicting_ci_rules(ci)
     queue = []
     for result in results:
         change = result.get('comparison_status')
@@ -34,7 +38,7 @@ def decision_queue(results, ci):
             priority = 1
         elif result['rule_id'] in flagged:
             priority = 2
-        elif result['status'] == 'unknown' or change in {'inconclusive', 'needs_change_evidence'}:
+        elif result['status'] == 'unknown' or change in {'inconclusive', 'needs_baseline', 'needs_change_evidence'}:
             priority = 3
         else:
             continue

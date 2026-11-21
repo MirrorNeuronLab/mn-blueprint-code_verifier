@@ -1,4 +1,6 @@
-# Code verifier manual
+# Software verifier manual
+
+Open the web report for the combined verdict. Select Functional verifier, Security verifier, Compatibility verifier or Reliability verifier to see its criteria, check outcomes and evidence. Select each co-worker independently in the catalog to run the same checks for one domain. Use Verification scope for approved examples, target contracts, workload budgets or runner evidence digests.
 
 ## Getting started and reviewing work
 
@@ -102,3 +104,13 @@ OtterDesk reads `payloads/prompts/conversation.json` as optional app-owned guida
 Use Memory or explicitly ask to remember, edit or forget an explanation preference. This affects Chat wording only; working rules and evidence keep their existing domain controls. The optional `inputs.payload.supervisor_instructions` array is app-managed, never a required setup answer or a new workflow permission.
 
 Use the selected run report and exact source/rule references. Documentation and absence of search hits cannot prove implementation correctness. Only Core approval of the exact rule revision authorizes verification. A conversational yes or saved preference cannot approve, edit or remove rules. Use Review rules and Job knowledge for requirements. Never execute repository code or claim conformance from missing evidence. Existing submitted runs retain their configuration, evidence and approvals. An idle prepared Job may refresh through the existing conditional API without rehiring, resetting memory or mutating an active run.
+
+## Delegate to dedicated verifiers
+
+Save a collaboration group with Software verifier as manager and the dedicated
+verifiers you want to use. After you approve the rules, the manager selects
+eligible checks and queues them for the matching specialists. It retains
+dependent checks and checks for roles outside the group. A specialist processes
+one assignment on its next run. Results available during the review appear in
+its report. Later results appear in the manager's mailbox and are reconciled
+under their original review on a subsequent manager run.

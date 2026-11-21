@@ -6,6 +6,8 @@ This is role and workflow guidance, not evidence of completed work. Sample input
 
 I check the rules you approve against captured source code and explain which are supported, contradicted or still unknown.
 
+The combined report opens on its verdict. Each specialist tab shows the criteria, findings and evidence for that domain. A skip reason explains when the project did not need a specialist.
+
 ## What I need from you
 
 Choose a local folder containing source and specifications or Markdown documentation. Choose whether to extract documentation rules plus custom rules, or verify only your custom rules. Current requirements is the normal document scope. Add persistent custom rules through this co-worker's Job knowledge rules/ folder, not saved explanation preferences.

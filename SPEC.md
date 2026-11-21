@@ -1,4 +1,21 @@
-# Code verifier specification
+# Software verifier specification
+
+Verification opens with developer findings and the specification-to-test evidence for each approved behavior. A prepared Git comparison can be selected by the coordinator or any specialist. Both snapshots use the same protected criteria. A finding distinguishes impact, confidence, inspected locations and remaining uncertainty. The structured report preserves the revision, case history and evidence references.
+
+For tests generated from analysis documents, attach the generator’s requirement-to-test index or review the links against frozen document passages. Bulk CI results retain the entire case inventory and distinguish verified passage links from suite-level provenance. Inspect the specialist tabs for named cases, prompts for unresolved coverage and supporting measurements.
+
+The Software verifier coordinates four independently runnable co-workers. Select a source folder and optionally supply a supervisor-owned verification scope. The coordinator captures the source once, waits for approval of the rule revision, then runs the source review alongside the selected specialist checks. Open the published web report to see the overall verdict and one tab per specialist.
+
+| Co-worker | What its report covers |
+| --- | --- |
+| Functional verifier | Syntax, schema examples, test assertions, and pinned counts and coverage |
+| Security verifier | TLS configuration outside test sources and pinned protection checks |
+| Compatibility verifier | JSON contracts, Python and Node package entry points, and target-specific integration records |
+| Reliability verifier | Schema workloads against a p95 budget and runner timings for pinned recovery checks |
+
+The setup sample supplies checks for all four tabs. An unselected specialist has a visible skip reason. Each check records its criterion, attempt history and supporting evidence. For test suites, builds or platforms outside the built-in checks, supply independently pinned execution records through **Runner evidence folder**. The source review can require further investigation even when every selected deterministic check passes.
+
+For a repair, supply a different candidate and the SHA-256 of the preceding nonpassing report in `repair_of`. Put the report bytes in the evidence folder as `<digest>.json`. The protected criteria stay fixed and up to two candidate revisions are linked. A merge or release scope requires integrated, target-specific evidence. The co-worker publishes the decision and leaves promotion to its owner.
 
 ## Activity-based run supervision
 
@@ -64,7 +81,7 @@ In OtterDesk, **Use default** under **Rules to verify** confirms extraction with
 the current document scope and any custom rules. Specification paths and the
 output folder are optional settings.
 
-The five serial logical phases are capture, extract, review, verify, publish. Each phase declares a stock domain-operation block. Domain hooks
+Capture, extract and rule approval are sequential. Source review and specialist coordination can then run in parallel. Publication requires both results. The coordinator uses a bounded child workflow and the remaining stages use stock domain operations. Domain hooks
 retain code-review policy and approval authority. Core owns routing and completion. Workers consume the native block context directly. Core execution is unchanged;
 the SDK stages folders using this blueprint's declared directory exclusions.
 
@@ -76,7 +93,7 @@ Workers must import those staged components so their identities match the
 compiled definition even when the execution computer has another SDK checkout.
 Activity supervision and the existing block integrity check stay enabled.
 Existing Job definitions require preparation from the updated blueprint before
-a new run uses this working directory. The five phases, 48 GiB Job allocation,
+a new run uses this working directory. The source-review phases, 48 GiB Job allocation,
 model route, approval and evidence policies are unchanged.
 
 ## Rule contract
@@ -298,7 +315,7 @@ bytes for the conversation workspace; optional presentation remains optional.
 
 ## Native block composition (3.0.0)
 
-All five phases bind directly to their domain implementations through SDK
+The five original source-review phases bind directly to their domain implementations through SDK
 `domain_operation` blocks in `extensions/blocks.json`. Each implementation
 consumes `BlockContext`; no legacy phase or context adapters remain. Capture
 resolves the staged input folder from declared local-input configuration and commits its snapshot and source
@@ -362,7 +379,7 @@ fixes, model-route changes and approval bypass remain unavailable.
 Extraction and verification checkpoints bind prompt/implementation policy, source
 identity and approved rules. Old-policy runs require a fresh run and human review;
 historical delivered reports are never overwritten. Runtime, SDK and desktop
-contracts and the five workflow phases remain unchanged.
+contracts for the original source-review phases continue to apply.
 
 For an authorized delivered run, `python code_verifier/benchmarks/compare_capture.py
 /path/to/run --output-dir /tmp/code-verifier-comparison` audits all prior conclusive

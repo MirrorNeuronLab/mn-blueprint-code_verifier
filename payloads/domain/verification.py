@@ -32,7 +32,7 @@ RECOVERY = {
 def policy_identity(analysis):
     root = Path(__file__).parent
     paths = [root / name for name in ('verification.py', 'evidence.py', 'retrieval.py', 'source_policy.py',
-                                    'model_contracts.py', 'git_comparison.py')]
+                                    'model.py', 'model_contracts.py', 'git_comparison.py')]
     paths += [root.parent / 'prompts' / name for name in ('verify.md', 'judge.md', 'critique.md')]
     return {'policy': 'scoped-static-review-v2', 'implementation': sha256(b''.join(p.read_bytes() for p in paths)).hexdigest(),
             'analysis_version': analysis['analysis_version'], 'ranking_version': TextSearchIndex.ranking_version,

@@ -7,6 +7,7 @@ from mn_sdk.blueprint.models import LLMClient
 from mn_sdk.blueprint.models import ModelAccessError
 
 from .model_contracts import response_schema
+from jsonschema import Draft202012Validator
 
 
 def client(*, extraction=False):
@@ -24,8 +25,21 @@ def ask(llm, prompt, packet):
     encoded = json.dumps(packet, ensure_ascii=False)
     if len(encoded.encode()) > 100_000:
         raise ValueError('Model evidence packet exceeds 100 KB; select a smaller source scope.')
-    result = llm.generate_json(system_prompt=system, user_prompt=encoded, fallback=None,
-        response_schema=response_schema(prompt), schema_name='software_review_response')
+    contract = response_schema(prompt)
+    # Local grammar compilers expand large bounded strings. Keep size enforcement
+    # in the application validator and constrain structure and enums on the wire.
+    def wire(value):
+        if isinstance(value, dict):
+            return {key: wire(item) for key, item in value.items() if key != 'maxLength'}
+        if isinstance(value, list):
+            return [wire(item) for item in value]
+        return value
+    def validate(value):
+        if not Draft202012Validator(contract).is_valid(value):
+            raise ValueError('Model response does not meet the software review contract.')
+        return value
+    result = llm.generate_json(system_prompt=system, user_prompt=encoded, fallback=None, validator=validate,
+        response_schema=wire(contract), schema_name='software_review_response')
     if not isinstance(result, dict):
         raise ValueError('Model did not return a JSON object.')
     if prompt in {'verify.md', 'judge.md', 'critique.md'}:

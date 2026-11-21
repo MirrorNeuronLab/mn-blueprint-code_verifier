@@ -2,7 +2,13 @@
   "inputs": {
     "payload": {
       "input_folder": "",
-      "supervisor_instructions": []
+      "supervisor_instructions": [],
+      "verification_scope": "",
+      "evidence_folder": "",
+      "goal_id": "software-verification",
+      "common_goal": "",
+      "collaboration_group_id": "",
+      "collaboration_peers": []
     }
   },
   "outputs": {
@@ -96,6 +102,19 @@
           ".yaml",
           ".yml"
         ]
+      },
+      {
+        "config_path": "inputs.payload.evidence_folder",
+        "linked_config_paths": [
+          "inputs.payload.evidence_folder"
+        ],
+        "payload_path": "runtime/mn_local_inputs/runner_evidence",
+        "runtime_path": "mn_local_inputs/runner_evidence",
+        "allowed_extensions": [
+          ".json",
+          ".artifact"
+        ],
+        "required": false
       }
     ]
   }

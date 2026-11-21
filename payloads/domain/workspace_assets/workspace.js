@@ -2,6 +2,10 @@
 
 const data = JSON.parse(document.getElementById("report-data").textContent);
 const report = data.report;
+const specialists = report.specialists || [];
+const specialistChecks = new Map(
+  (report.specialist_report?.checks || []).map((check) => [check.id, check]),
+);
 const snapshots = { head: data.sources, base: data.baseline || {} };
 const rules = new Map(report.rules.map((rule) => [rule.id, rule]));
 const results = new Map(
@@ -25,6 +29,7 @@ const mappingLabels = {
 const initial = new URLSearchParams(location.hash.slice(1));
 const viewNames = [
   "overview",
+  ...specialists.map((specialist) => specialist.id),
   "results",
   "rules",
   "scope",
@@ -428,8 +433,90 @@ function ciView() {
     </details>`;
 }
 
+function reviewSource(ref) {
+  if (!ref) return "";
+  const side = ref.side || "head";
+  const path = (data.repositoryPrefix || "") + ref.path;
+  if (!Object.hasOwn(snapshots[side] || {}, path)) return esc(ref.path);
+  return sourceButton({path, start_line: ref.line || 1, end_line: ref.end_line || ref.line || 1},
+    side, null, ref.path + (ref.line ? `:${ref.line}` : ""));
+}
+
+function issueCard(issue) {
+  const refs = issue.supporting_evidence?.length ? issue.supporting_evidence : [issue.evidence].filter(Boolean);
+  return `<article class="finding-card"><div class="finding-heading"><h4>${esc(issue.title || issue.observed)}</h4>
+    ${statusBadge(issue.change || "Candidate observation", issue.disposition === "inconclusive" ? "unknown" : "fail")}</div>
+    <p class="review-meta">${esc(issue.severity)} severity · ${esc(issue.confidence || "limited")} confidence</p>
+    <p><strong>Expected</strong> ${esc(issue.expected)}</p><p><strong>Observed</strong> ${esc(issue.observed)}</p>
+    ${issue.impact ? `<p><strong>Impact</strong> ${esc(issue.impact)}</p>` : ""}
+    <p><strong>Suggested fix</strong> ${esc(issue.recommendation)}</p><div class="report-actions">${refs.map(reviewSource).join(" ")}</div>
+    <details><summary>Verification and uncertainty</summary><p>${esc(issue.reproduce)}</p><p>${esc(issue.regression_test || "")}</p>
+    <p>${esc(issue.uncertainty || "")}</p><p>${esc(issue.expectation_source || "")}</p></details></article>`;
+}
+
+function traceCard(trace) {
+  const context = trace.replay_context;
+  return `<article class="finding-card"><div class="finding-heading"><h4>${esc(trace.expectation)}</h4>
+    ${statusBadge(trace.change, trace.status === "passed" ? "pass" : trace.status === "failed" ? "fail" : "unknown")}</div>
+    <p>${esc(trace.observed || trace.reason)} ${trace.baseline_observation ? `Baseline · ${esc(trace.baseline_observation)}` : ""}</p>
+    <dl class="scope-facts"><div><dt>Specification</dt><dd>${reviewSource(trace.specification) || "Unverified"}</dd></div>
+    <div><dt>Generated test</dt><dd>${reviewSource(trace.test_location) || "Unverified"} <code>${esc(trace.test_location?.symbol || trace.selector)}</code></dd></div>
+    ${trace.assertion ? `<div><dt>Failed assertion</dt><dd>${reviewSource(trace.assertion)}</dd></div>` : ""}
+    <div><dt>Implementation</dt><dd>${trace.locations.map(reviewSource).join(" ")}</dd></div></dl>
+    <p><strong>Conditions</strong> ${esc(trace.setup)}</p><p><strong>Coverage limit</strong> ${esc(trace.uncertainty)}</p>
+    ${context ? `<details><summary>Replay conditions</summary><p>${esc(context.environment)} · seed ${esc(context.seed)}</p><p>${esc(context.simulation)}. ${esc(context.reset)}</p></details>` : ""}
+    </article>`;
+}
+
+function coordinatorOverview() {
+  const ledger = report.specialist_report;
+  if (!ledger?.plan) return overview();
+  const issues = ledger.findings || [];
+  const traces = ledger.requirement_traces || [];
+  const plan = ledger.plan;
+  const affected = plan.affected || [];
+  return `<section class="review-intro"><h2>Verification verdict</h2>
+    <p><strong>${esc(report.verdict)}</strong> · ${esc(plan.decision)} decision${plan.revision ? ` · <code>${esc(plan.revision.slice(0, 12))}</code>` : ""}</p>
+    <p>${esc((report.reasons || []).join(" "))}</p>
+    ${attention.length ? button(`Review ${plural(attention.length, "rule")}`, "filter", "attention") : ""}</section>
+    ${issues.length ? `<section class="finding-list"><h3>Priority findings</h3>${issues.slice(0, 5).map(issueCard).join("")}</section>` : ""}
+    ${traces.length ? `<section class="finding-list"><h3>What the specification tests established</h3>${traces.slice(0, 8).map(traceCard).join("")}</section>` : ""}
+    ${affected.length ? `<details class="report-details"><summary>Affected components (${affected.length})</summary>
+      <ul>${affected.map(r => `<li>${esc(r.path)} · ${esc(r.reason)}${r.via ? ` · ${esc(r.via)}` : ""}</li>`).join("")}</ul></details>` : ""}
+    <div class="report-actions">${specialists.map(s => button(`${s.label} · ${s.verdict}`, "view", s.id)).join(" ")}</div>
+    ${overview()}`;
+}
+
+function specialistView(specialist) {
+  const doc = specialist.document;
+  const ledger = report.specialist_report || {};
+  const issues = (ledger.findings || []).filter(f => f.check_ids?.some(id => specialist.check_ids?.includes(id)));
+  const traces = (ledger.requirement_traces || []).filter(t => t.specialist === specialist.id);
+  function blockHtml(block) {
+    if (block.type === "table") {
+      return `<div class="specialist-table" tabindex="0" role="region" aria-label="${esc(specialist.label)} evidence">
+        <table><thead><tr>${block.columns.map(c => `<th scope="col">${esc(c)}</th>`).join("")}</tr></thead>
+        <tbody>${block.rows.map(row => `<tr>${row.map(c => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    }
+    if (block.type === "metric") return `<p><strong>${esc(block.value)}</strong> · ${esc(block.qualification)}</p>`;
+    return `<p${block.type === "warning" ? ' role="note"' : ""}>${esc(block.text)}</p>`;
+  }
+  return `<h2>${esc(doc.title)}</h2><p>${esc(doc.summary)}</p>${doc.sections.map(section => {
+    const title = esc(section.title);
+    if (section.id === "review" && (issues.length || traces.length))
+      return `<section class="finding-list"><h3>${title}</h3>${issues.map(issueCard).join("")}${traces.map(traceCard).join("")}</section>`;
+    const content = section.blocks.map(blockHtml).join("");
+    if (section.id?.startsWith("tests-")) return `<section><h3>${title}</h3>${blockHtml(section.blocks[0])}
+      <details><summary>Inspect the test-to-specification index</summary>${section.blocks.slice(1).map(blockHtml).join("")}</details></section>`;
+    if (["checks", "findings", "evidence"].includes(section.id))
+      return `<details class="report-details"><summary>${title}</summary>${content}</details>`;
+    return `<section><h3>${title}</h3>${content}</section>`;
+  }).join("")}`;
+}
+
 const views = {
-  overview,
+  overview: specialists.length ? coordinatorOverview : overview,
+  ...Object.fromEntries(specialists.map((s) => [s.id, () => specialistView(s)])),
   results: resultRows,
   rules: ruleBook,
   scope,
@@ -438,6 +525,7 @@ const views = {
 const ui = MNWebReport.createReport({
   tabs: [
     ["overview", "Overview", "content"],
+    ...specialists.map((s) => [s.id, s.label, "content"]),
     ["results", "Rule results", "content"],
     ["rules", "Approved rules", "content"],
     ["scope", "Scope and limits", "content"],
@@ -521,6 +609,7 @@ function inspectRule(id, trigger) {
   const pending = result.assessment?.missing_evidence?.trim();
   const check = checkFor(result);
   const checks = ciByRule.get(id);
+  const linked = report.rule_checks?.[id]?.map((key) => specialistChecks.get(key)).filter(Boolean);
   const base = result.baseline;
   const origins = [
     { ...rule.source, quote: rule.quote || rule.source?.quote },
@@ -539,6 +628,9 @@ function inspectRule(id, trigger) {
       ${pending ? `<p><strong>Missing evidence</strong> ${esc(pending)}</p>` : ""}
     </section>
     ${check ? `<section class="next-check"><h3>Suggested check</h3><p>${esc(check)}</p></section>` : ""}
+    ${linked ? `<section><h3>Specialist checks</h3>${linked.length
+      ? linked.map((item) => button(`${item.id} · ${item.status}`, "view", item.specialist)).join(" ")
+      : "<p>No specialist check was linked to this rule.</p>"}</section>` : ""}
     ${base ? `<p class="revision-summary"><strong>Base ${statuses[base.status]}</strong> · <strong>Proposed ${statuses[result.status]}</strong></p>` : ""}
     <section><h3>Inspected evidence</h3>${evidenceList(result, "head", id)}</section>
     ${

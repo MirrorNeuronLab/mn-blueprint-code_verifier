@@ -34,8 +34,18 @@ def file_exclusion(path, extensions):
     return None
 
 
+class CredentialMaterial(ValueError):
+    def __init__(self, line):
+        self.line = line
+        super().__init__("Credential material withheld from the source capture.")
+
+
 def source_text(data):
     text = data.decode('utf-8')
     if '\0' in text:
         raise ValueError('Binary source.')
+    # Git preparation runs with the standard library before an SDK or skill is installed.
+    material = re.search(r'-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----|\b(?:gh[pousr]_[A-Za-z0-9]{36,}|AKIA[0-9A-Z]{16})\b', text)
+    if material:
+        raise CredentialMaterial(text.count('\n', 0, material.start()) + 1)
     return text

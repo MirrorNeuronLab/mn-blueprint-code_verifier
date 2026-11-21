@@ -1,6 +1,6 @@
 {
   "$schema": "https://mirrorneuron.io/schemas/blueprint/v1/contracts.schema.json",
-  "summary": "Read-only static verification of documented and supervisor-authored software rules.",
+  "summary": "Approved rule review and four specialist verification reports for the same captured subject.",
   "inputs": {
     "input_folder": {
       "type": "local_path",
@@ -13,7 +13,7 @@
       "type": "array",
       "required": false,
       "privacy": "confidential",
-      "description": "Explicit explanation preferences for Chat, not clinical rules or native model instructions.",
+      "description": "Saved explanation preferences for Chat. The verification scope controls which checks run.",
       "maxItems": 50,
       "items": {
         "type": "object",
@@ -40,6 +40,39 @@
           }
         }
       }
+    },
+    "verification_scope": {
+      "type": "string",
+      "required": false,
+      "privacy": "confidential",
+      "description": "Supervisor-owned JSON scope with paths, requirements, checks and optional independently pinned test records."
+    },
+    "evidence_folder": {
+      "type": "local_path",
+      "path_kind": "directory",
+      "required": false,
+      "privacy": "confidential",
+      "description": "Optional independent runner records and package bytes identified by their approved SHA-256 digests."
+    },
+    "goal_id": {
+      "type": "string",
+      "required": false,
+      "description": "Exchange goal for co-worker collaboration."
+    },
+    "common_goal": {
+      "type": "string",
+      "required": false,
+      "description": "Shared goal for co-worker collaboration."
+    },
+    "collaboration_group_id": {
+      "type": "string",
+      "required": false,
+      "description": "Collaboration group for co-worker collaboration."
+    },
+    "collaboration_peers": {
+      "type": "array",
+      "required": false,
+      "description": "Group members for co-worker collaboration."
     }
   },
   "outputs": {
@@ -54,7 +87,10 @@
         "results",
         "summary",
         "snapshot_id",
-        "rules_review"
+        "rules_review",
+        "verdict",
+        "specialists",
+        "specialist_report"
       ]
     },
     "artifacts": [
@@ -190,12 +226,26 @@
         "mime_type": "application/json",
         "required": true,
         "privacy": "confidential"
+      },
+      {
+        "artifact_id": "specialist_plan",
+        "path": "verification-plan.json",
+        "mime_type": "application/json",
+        "privacy": "confidential",
+        "required": false
+      },
+      {
+        "artifact_id": "specialist_audit",
+        "path": "specialists",
+        "mime_type": "application/octet-stream",
+        "privacy": "confidential",
+        "required": false
       }
     ]
   },
   "privacy": {
     "classification": "confidential",
     "external_sharing": "disabled",
-    "notes": "Captured source and bounded evidence are sent to the configured SDK model route. No repository code or tests execute."
+    "notes": "Source and approved rules use the configured model route. Deterministic specialists read captured text and independently pinned observations."
   }
 }

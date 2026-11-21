@@ -6,7 +6,14 @@
       "hooks": {
         "operation": "domain.intake:capture"
       },
-      "inputs": {},
+      "inputs": {
+        "verification_scope": {
+          "$ref": "run_input",
+          "path": [
+            "verification_scope"
+          ]
+        }
+      },
       "outputs": {
         "result": {
           "$ref": "flow_output",
@@ -109,6 +116,13 @@
             "result"
           ],
           "step_id": "verify_software_rules"
+        },
+        "specialists": {
+          "$ref": "upstream",
+          "step_id": "coordinate_verification",
+          "path": [
+            "result"
+          ]
         }
       },
       "outputs": {
@@ -121,6 +135,34 @@
       },
       "limits": {
         "max_calls": 1
+      }
+    },
+    "coordinate_verification": {
+      "uses": "mn.blocks.bounded_investigation@1",
+      "hooks": {
+        "initialize": "domain.specialist_workflow:initialize",
+        "plan": "domain.specialist_workflow:plan_round",
+        "summarize": "domain.specialist_workflow:summarize"
+      },
+      "inputs": {
+        "previous": {
+          "$ref": "upstream",
+          "step_id": "review_software_rules",
+          "path": [
+            "result"
+          ]
+        }
+      },
+      "limits": {
+        "max_calls": 1
+      },
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "report",
+          "approval",
+          "capture"
+        ]
       }
     }
   }

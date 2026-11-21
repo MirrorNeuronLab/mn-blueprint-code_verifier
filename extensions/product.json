@@ -7,7 +7,7 @@
     "safety": {
       "enabled": true,
       "mode": "review_only",
-      "reason": "Inspect source without executing programs or applying fixes.",
+      "reason": "Source-only review and bounded declarative checks. Execute external suites on an independently controlled runner.",
       "blocked_actions": [
         "execute_source",
         "execute_tests",
@@ -19,11 +19,11 @@
     }
   },
   "product": {
-    "agent_role": "Software rules reviewer",
+    "agent_role": "Software verification coordinator",
     "benefit": "Find documented behavior a change breaks and see how to check it.",
-    "how_it_works": "Extracts rules from SPEC.md, docs and knowledge, asks the supervisor to review them in Chat, and investigates each rule only after explicit approval.",
+    "how_it_works": "Captures the source, requests rule approval, plans eligible specialist checks and reconciles their observations in one report.",
     "input": "A local source folder or a prepared Git comparison. Optional Markdown rules and mapped JUnit evidence.",
-    "output": "Editable rules and a report with prioritized findings, exact source citations and suggested checks.",
+    "output": "A consolidated verification verdict with four specialist tabs, source citations and a complete attempt inventory.",
     "runtime_features": [
       "Read-only source capture",
       "Editable Markdown rules",
@@ -32,6 +32,26 @@
       "Exact evidence references",
       "Explicit unknowns"
     ],
-    "customizable_for": "Software expectations and prohibitions supplied as Markdown."
+    "customizable_for": "Software expectations and prohibitions supplied as Markdown.",
+    "collaboration": {
+      "schema": "mn.collaboration.group.v1",
+      "topology": "group",
+      "protocol": "software-verification.v1",
+      "goalId": "software-verification",
+      "accepts": [
+        "functional_verifier",
+        "security_verifier",
+        "compatibility_verifier",
+        "reliability_verifier"
+      ],
+      "goalKey": "inputs.payload.goal_id",
+      "commonGoalKey": "inputs.payload.common_goal",
+      "groupKey": "inputs.payload.collaboration_group_id",
+      "peersKey": "inputs.payload.collaboration_peers",
+      "maxMembers": 5,
+      "sameRuntime": true,
+      "managerBlueprintId": "code_verifier",
+      "delivery": "mailbox"
+    }
   }
 }

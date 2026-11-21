@@ -3,8 +3,8 @@
   "workflow_id": "code_verifier_v1",
   "mode": "static_dag",
   "execution": {
-    "strategy": "serial",
-    "max_parallel_steps": 1,
+    "strategy": "parallel",
+    "max_parallel_steps": 5,
     "supervision": "activity"
   },
   "steps": [
@@ -63,12 +63,27 @@
       }
     },
     {
+      "id": "coordinate_verification",
+      "kind": "stage",
+      "label": "Coordinate specialist checks",
+      "goal": "Dispatch relevant verification assignments, preserve attempts and reconcile all mandatory evidence.",
+      "needs": [
+        "review_software_rules"
+      ],
+      "control": {
+        "retry": {
+          "max_attempts": 2
+        }
+      }
+    },
+    {
       "id": "publish_rules_report",
       "kind": "sink",
-      "label": "Write rules report",
-      "goal": "Write rules report with exact source references and explicit limits.",
+      "label": "Publish combined report",
+      "goal": "Merge rule review and four specialist reports into one evidence-backed verdict.",
       "needs": [
-        "verify_software_rules"
+        "verify_software_rules",
+        "coordinate_verification"
       ],
       "control": {
         "retry": {
@@ -91,6 +106,165 @@
         "verify_unapproved_rules"
       ],
       "reason": "The supervisor must approve the exact extracted and custom rules before source verification."
+    }
+  },
+  "child_workflows": {
+    "coordinate_verification": {
+      "planner": "plan_verification_round",
+      "templates": {
+        "plan_verification_round": {
+          "control": {
+            "retry": {
+              "max_attempts": 2
+            }
+          },
+          "input_schema": {
+            "type": "object",
+            "required": []
+          }
+        },
+        "inspect_functional": {
+          "run": {
+            "block": {
+              "uses": "mn.blocks.domain_operation@1",
+              "hooks": {
+                "operation": "domain.specialist_workflow:inspect_functional"
+              },
+              "input_schema": {
+                "type": "object",
+                "required": [
+                  "packet",
+                  "assignment"
+                ]
+              },
+              "limits": {
+                "max_calls": 1
+              }
+            }
+          },
+          "control": {
+            "retry": {
+              "max_attempts": 2
+            }
+          },
+          "input_schema": {
+            "type": "object",
+            "required": [
+              "packet",
+              "assignment"
+            ]
+          }
+        },
+        "inspect_security": {
+          "run": {
+            "block": {
+              "uses": "mn.blocks.domain_operation@1",
+              "hooks": {
+                "operation": "domain.specialist_workflow:inspect_security"
+              },
+              "input_schema": {
+                "type": "object",
+                "required": [
+                  "packet",
+                  "assignment"
+                ]
+              },
+              "limits": {
+                "max_calls": 1
+              }
+            }
+          },
+          "control": {
+            "retry": {
+              "max_attempts": 2
+            }
+          },
+          "input_schema": {
+            "type": "object",
+            "required": [
+              "packet",
+              "assignment"
+            ]
+          }
+        },
+        "inspect_compatibility": {
+          "run": {
+            "block": {
+              "uses": "mn.blocks.domain_operation@1",
+              "hooks": {
+                "operation": "domain.specialist_workflow:inspect_compatibility"
+              },
+              "input_schema": {
+                "type": "object",
+                "required": [
+                  "packet",
+                  "assignment"
+                ]
+              },
+              "limits": {
+                "max_calls": 1
+              }
+            }
+          },
+          "control": {
+            "retry": {
+              "max_attempts": 2
+            }
+          },
+          "input_schema": {
+            "type": "object",
+            "required": [
+              "packet",
+              "assignment"
+            ]
+          }
+        },
+        "inspect_reliability": {
+          "run": {
+            "block": {
+              "uses": "mn.blocks.domain_operation@1",
+              "hooks": {
+                "operation": "domain.specialist_workflow:inspect_reliability"
+              },
+              "input_schema": {
+                "type": "object",
+                "required": [
+                  "packet",
+                  "assignment"
+                ]
+              },
+              "limits": {
+                "max_calls": 1
+              }
+            }
+          },
+          "control": {
+            "retry": {
+              "max_attempts": 2
+            }
+          },
+          "input_schema": {
+            "type": "object",
+            "required": [
+              "packet",
+              "assignment"
+            ]
+          }
+        }
+      },
+      "inputs": {
+        "seed": [
+          "outputs",
+          "result"
+        ]
+      },
+      "outputs": {
+        "result": [
+          "result"
+        ]
+      },
+      "max_rounds": 4,
+      "max_steps_per_round": 64
     }
   }
 }

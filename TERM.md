@@ -1,12 +1,12 @@
 # Review terms
 
 The co-worker produces review material from authorized source and documentation.
-Results may be incomplete or incorrect. Pass is a scoped static AI assessment,
-not proof of software behavior or safety. A human remains responsible for deciding
-what to test, fix, release or rely on. No source is executed or remediated.
-Verification requires explicit supervisor approval of the exact extracted and
-custom rules in the co-worker conversation. This approves only a static review,
-not code execution, repository changes or release.
+Source-rule assessments are model judgments about cited source. Specialist
+verdicts apply to the named checks, captured source and independently pinned
+execution records. A human remains responsible for deciding what to test, fix
+or release. Verification requires supervisor approval of the exact rule revision.
+Built-in checks operate on captured text and approved data examples. External
+test suites run on their owner's runner.
 
 Captured source, knowledge and reports are confidential. Use only material you are
 authorized to inspect and share with the configured model provider. The selected

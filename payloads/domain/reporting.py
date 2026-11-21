@@ -12,6 +12,7 @@ from mn_sdk.blueprint.outputs import publish_artifact_bundle, publish_files
 from .artifacts import read, save
 from .publication import deliver_reports
 from .configuration import BLUEPRINT_ID
+from .consolidation import consolidate
 from .git_comparison import COMPARISON_LABELS
 from .report_findings import ci_view, decision_queue, finding_label, main_evidence, suggested_check
 from .rule_document import short_title
@@ -47,6 +48,8 @@ def publish(block, inputs):
     if rules.get('comparison') != comparison or bool(comparison) != bool(verification.get('comparison')):
         raise ValueError('Report inputs have different Git comparisons.')
     ci = ci_view(comparison, rules['rules'])
+    combined = consolidate(block, inputs, capture, approval, rules, results, ci=ci)
+    specialist_checks = {check['id']: check for check in combined['specialist_report']['checks']}
     queue = decision_queue(verification['results'], ci)
     next_checks = {ident: check for ident in queue if (check := suggested_check(results[ident], ci))}
     gaps = rules.get('extraction_gaps', [])
@@ -99,8 +102,8 @@ def publish(block, inputs):
             lines.append(f"| {cell(check['rule_id'])} | {cell(check['test'])} | {check['status'].capitalize()} | "
                          f"{mapping_labels[check['mapping']]} |")
         lines.append('')
-    lines += ['## Rule results', '', '| Rule | Pass or not | Evidence with reference | Confidence (0–1) |',
-              '| --- | --- | --- | --- |']
+    lines += ['## Rule results', '', '| Rule | Pass or not | Evidence with reference | Confidence (0–1) | Specialist checks |',
+              '| --- | --- | --- | --- | --- |']
     for rule in rules['rules']:
         result = results[rule['id']]
         references = []
@@ -112,10 +115,12 @@ def publish(block, inputs):
             status += f" (base {prior['status'].capitalize()})"
             if prior_span := main_evidence(prior):
                 references.append(f"Base evidence {source_link(prior_span, 'baseline/source')}")
+        linked = ', '.join(f"{cell(ident)} ({cell(specialist_checks[ident]['status'])})"
+                           for ident in combined['rule_checks'][rule['id']])
         lines.append(f"| {cell(rule['id'] + ': ' + rule['statement'])} | {status} | "
                      f"{'; '.join(references) or 'No admissible implementation evidence.'} "
                      f"{cell(result['explanation'])} {cell(next_checks.get(rule['id'], ''))} "
-                     f"| {result['confidence']:.2f} |")
+                     f"| {result['confidence']:.2f} | {linked or 'None linked'} |")
     diagnostics = verification.get('diagnostics', {})
     lines += ['', '## Investigation coverage', '',
               f"Model calls: {diagnostics.get('model_calls', 0)}. "
@@ -166,11 +171,39 @@ def publish(block, inputs):
                           'review_flags': rules.get('review_flags', [])}}
     if comparison:
         final['comparison'] = {**{key: value for key, value in comparison.items() if key != 'ci'}, **verification['comparison']}
-        if any(result['comparison_status'] in {'needs_baseline', 'needs_change_evidence', 'inconclusive'}
-               for result in results.values()):
-            final['assessment_status'] = 'needs_review'
     if ci:
         final['ci_evidence'] = ci
+    from mn_web_report_skill import render_report_markdown
+    final.update(combined)
+    if combined["verdict"] != "PASS":
+        final["assessment_status"] = "needs_review"
+    summary_lines = ["# Software verification report", "", f"**Verdict: {combined['verdict']}**", ""]
+    summary_lines.extend(f"- {cell(reason)}" for reason in combined["reasons"])
+    ledger = combined["specialist_report"]
+    if ledger.get("earlier_delegations"):
+        summary_lines += ["", "## Results from earlier reviews", ""]
+        for result in ledger["earlier_delegations"]:
+            summary_lines.append(f"- {cell(result['role'].capitalize())} verifier · {cell(result['report']['verdict'])}"
+                                 f" · review {cell(result['run_id'])}")
+    if ledger["findings"]:
+        summary_lines += ["", "## Findings to investigate", ""]
+        for item in ledger["findings"][:12]:
+            summary_lines.append(f"- **{cell(item.get('title') or item['observed'])}** · "
+                                 f"{cell(item['severity'])} severity. {cell(item['recommendation'])}")
+    if ledger.get("requirement_traces"):
+        summary_lines += ["", "## Specification and generated tests", ""]
+        for trace in ledger["requirement_traces"]:
+            text = trace.get("observed", trace["reason"])
+            summary_lines.append(f"- **{cell(trace['expectation'])}** {cell(trace['change'])}. {cell(text)}")
+            for name, ref in [("Specification", trace.get("specification")), ("Generated test", trace.get("test_location")),
+                              *(("Implementation", ref) for ref in trace["locations"])]:
+                if ref:
+                    location = {**ref, "path": capture.get("repository_prefix", "") + ref["path"],
+                                "start_line": ref["line"], "end_line": ref.get("end_line", ref["line"])}
+                    summary_lines.append(f"  - {name} {source_link(location)}")
+    for specialist in combined["specialists"]:
+        summary_lines.extend(["", render_report_markdown(specialist["document"]).replace("# ", "## ", 1).strip()])
+    lines = [*summary_lines, "", "## Source rule review", "", *lines[2:]]
     # Captured evidence is committed individually; large repositories do not
     # consume the publication bundle's limit of 128 top-level report artifacts.
     for path, content in capture["sources"].items():
@@ -225,6 +258,6 @@ def publish(block, inputs):
             kind=item['reference']['kind'], required=item['required'])
         for item in receipt['artifacts']
     ], name='rules_report')
-    return {"rules": len(results), "summary": counts, "report": "report.md",
+    return {"rules": len(results), "summary": counts, "verdict": final["verdict"], "report": "report.md",
             "artifacts": receipt["artifacts"], "warnings": receipt["warnings"],
             "published_files": published_files}

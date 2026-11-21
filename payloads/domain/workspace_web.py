@@ -29,9 +29,10 @@ def render(report, capture, *, baseline=None):
         script=(assets / "workspace.js").read_text(),
         style=(assets / "workspace.css").read_text(),
         data={"report": display, "sources": capture["sources"], "baseline": baseline or {},
+              "repositoryPrefix": capture.get("repository_prefix", ""),
               "comparisonLabels": COMPARISON_LABELS},
         description=(f"Partial extraction: {len(report.get('coverage', {}).get('extraction_gaps', []))} unresolved "
                      "source sections. Listed rules only; missing requirements are not assessed. "
                      if report.get('coverage', {}).get('extraction_gaps') else '')
-                    + "Static source review · Repository code and tests were not executed.",
+                    + "Captured source review and deterministic checks. Specialist tabs identify executed examples and independently supplied runner evidence.",
     )

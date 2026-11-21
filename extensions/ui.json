@@ -61,12 +61,59 @@
         "description": "Enter one path or pattern per line, relative to the source folder, such as docs/retries.md or docs/*.md. Leave blank to use Rule documents."
       },
       {
+        "path": "inputs.payload.verification_scope",
+        "label": "Verification scope",
+        "type": "textarea",
+        "required": false,
+        "default": "",
+        "description": "Enter approved checks as JSON. Leave blank for checks selected from the captured project."
+      },
+      {
+        "path": "inputs.payload.evidence_folder",
+        "label": "Runner evidence folder",
+        "type": "local_path",
+        "path_kind": "directory",
+        "role": "input",
+        "required": false,
+        "default": "",
+        "description": "Select only when the scope uses independently pinned execution records."
+      },
+      {
         "path": "outputs.folder_path",
         "label": "Output folder",
         "type": "local_path",
         "path_kind": "directory",
         "role": "output",
         "default": "~/Downloads/code-verifier"
+      },
+      {
+        "path": "inputs.payload.goal_id",
+        "label": "Exchange goal",
+        "type": "text",
+        "required": false,
+        "default": "software-verification"
+      },
+      {
+        "path": "inputs.payload.common_goal",
+        "label": "Shared goal",
+        "type": "textarea",
+        "required": false,
+        "default": ""
+      },
+      {
+        "path": "inputs.payload.collaboration_group_id",
+        "label": "Collaboration group",
+        "type": "text",
+        "required": false,
+        "default": ""
+      },
+      {
+        "path": "inputs.payload.collaboration_peers",
+        "label": "Group members",
+        "type": "textarea",
+        "required": false,
+        "default": [],
+        "value_type": "array"
       }
     ]
   },
@@ -75,7 +122,7 @@
     "kind": "output",
     "adapter": "static_html",
     "title": "Code verification",
-    "description": "Explore rule results and captured source evidence in the conversation workspace.",
+    "description": "One verification report with four specialist tabs and the approved source-rule review.",
     "registration": {
       "artifact": "web/index.html",
       "scope": "run",
@@ -89,15 +136,16 @@
   ],
   "setup_guide": {
     "schema": "otterdesk.setup_guide.v1",
-    "introduction": "Try the sample task app to see how a written rule compares with its code, or choose your own source folder. You’ll review the rule list before I check it.",
+    "introduction": "Choose a source folder and approve its rules. Four specialists can check behavior, security, compatibility and reliability against the selected scope.",
     "sample": {
       "available": true,
       "title": "Sample task app",
       "description": "Use the bundled task app and its short specification. You’ll approve the extracted rules before verification.",
-      "expected_output": "A rule list to approve, followed by verdicts linked to the sample code.",
+      "expected_output": "One report with checks for the request schema, TLS settings, wire protocol and timing budget, plus the source evidence for the rules you approved.",
       "values": {
         "inputs.payload.input_folder": "@/examples/sample_inputs",
-        "review.rules_mode": "augment"
+        "review.rules_mode": "augment",
+        "inputs.payload.verification_scope": "{\"checks\":[{\"id\":\"names\",\"kind\":\"schema_cases\",\"file\":\"input.schema.json\",\"requirement\":\"Accept named requests and reject requests without a name.\",\"cases\":[{\"id\":\"valid-name\",\"input\":{\"name\":\"Ada\"},\"accept\":true},{\"id\":\"missing-name\",\"input\":{},\"accept\":false}]},{\"id\":\"protocol\",\"kind\":\"json_contract\",\"file\":\"wire.json\",\"keys\":{\"protocol\":2},\"requirement\":\"Retain wire protocol 2.\"},{\"id\":\"name-workload\",\"kind\":\"schema_workload\",\"file\":\"input.schema.json\",\"cases\":[{\"id\":\"valid-name\",\"input\":{\"name\":\"Ada\"},\"accept\":true},{\"id\":\"missing-name\",\"input\":{},\"accept\":false}],\"max_p95_ms\":100,\"requirement\":\"The two example validations take at most 100 ms at p95 on this runner.\"}]}"
       }
     },
     "real": {
@@ -115,12 +163,41 @@
         "required": false,
         "default": [],
         "description": "Managed in Memory. Changes Chat wording only; domain work and approvals keep their existing controls."
+      },
+      {
+        "path": "inputs.payload.goal_id",
+        "label": "Exchange goal",
+        "type": "text",
+        "required": false,
+        "default": "software-verification"
+      },
+      {
+        "path": "inputs.payload.common_goal",
+        "label": "Shared goal",
+        "type": "textarea",
+        "required": false,
+        "default": ""
+      },
+      {
+        "path": "inputs.payload.collaboration_group_id",
+        "label": "Collaboration group",
+        "type": "text",
+        "required": false,
+        "default": ""
+      },
+      {
+        "path": "inputs.payload.collaboration_peers",
+        "label": "Group members",
+        "type": "textarea",
+        "required": false,
+        "default": [],
+        "value_type": "array"
       }
     ],
     "prompt_file": "@/payloads/prompts/setup.md",
     "run_guidance": {
       "on_start": "I’ll prepare the rule list from your selected inputs. When Review rules appears, check the wording before you approve it.",
-      "web_ui_ready": "Open the verification report, select a rule, and follow its citation to the supporting code.",
+      "web_ui_ready": "Open the report for the combined verdict, then select a specialist tab to inspect checks, evidence and gaps.",
       "output_ready": "Open report.md in the output folder to see the verdict and source evidence for each approved rule."
     }
   }

@@ -11,7 +11,7 @@ from .artifacts import read
 from .configuration import BLUEPRINT_ID, settings
 from .git_comparison import changed_files, load_bundle
 from .source_files import (DOCUMENT_EXTENSIONS, MAX_BYTES, MAX_FILES, MAX_FILE_BYTES,
-                           excluded_directory, file_exclusion, source_text)
+                           CredentialMaterial, excluded_directory, file_exclusion, source_text)
 from .source_policy import source_role
 
 TEXT_EXTENSIONS = SUPPORTED_EXTENSIONS | {'.md', '.txt', '.rst', '.json', '.yaml', '.yml',
@@ -54,6 +54,9 @@ def capture_folder(root, *, max_files=MAX_FILES, max_bytes=MAX_BYTES):
                 raise ValueError('Source grew beyond the capture budget.')
             try:
                 value = source_text(data)
+            except CredentialMaterial as error:
+                omitted.append({'path': relative.as_posix(), 'line': error.line, 'reason': 'credential_material_withheld'})
+                continue
             except ValueError:
                 omitted.append({'path': relative.as_posix(), 'reason': 'not_utf8_text'})
                 continue

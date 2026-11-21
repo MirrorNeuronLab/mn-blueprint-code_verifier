@@ -3,6 +3,23 @@
   padding: 0;
 }
 
+.report .specialist-table {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.report .specialist-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.report .specialist-table th,
+.report .specialist-table td {
+  padding: .5rem;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--report-border);
+}
+
 .report .review-intro {
   margin-bottom: 28px;
 }
