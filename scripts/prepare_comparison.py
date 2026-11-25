@@ -1,4 +1,4 @@
-"""Prepare a Code verifier input folder from two local Git commits."""
+"""Prepare a Software verifier suite input folder from two local Git commits."""
 import argparse
 from io import BytesIO
 import json
@@ -140,7 +140,7 @@ def main():
                          rule_map=args.rule_map, ci_commit=args.ci_commit)
     except (OSError, ValueError) as error:
         parser.exit(1, f'Could not prepare the comparison. {error}\n')
-    print(f'Select this folder in Code verifier: {output}')
+    print(f'Select this folder in Software verifier suite: {output}')
 
 
 if __name__ == '__main__':

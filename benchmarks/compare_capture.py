@@ -79,7 +79,7 @@ def main():
     result = audit(capture, report)
     output.mkdir(parents=True, exist_ok=True)
     (output / 'comparison.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n')
-    lines = ['# Code verifier capture comparison', '',
+    lines = ['# Software verifier suite capture comparison', '',
         'Offline retrieval and evidence-policy audit. No new pass/fail judgments, model calls or source execution.', '',
         *[f'- {name}: {value}' for name, value in result['summary'].items()], '',
         '| Rule | Original | Source qualification | New source candidates |', '| --- | --- | --- | --- |']

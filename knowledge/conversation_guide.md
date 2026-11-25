@@ -1,4 +1,4 @@
-# Code verifier conversation guide
+# Software verifier suite conversation guide
 
 This is role and workflow guidance, not evidence of completed work. Sample inputs and fictional examples do not establish findings.
 
@@ -10,11 +10,11 @@ The combined report opens on its verdict. Each specialist tab shows the criteria
 
 ## What I need from you
 
-Choose a local folder containing source and specifications or Markdown documentation. Choose whether to extract documentation rules plus custom rules, or verify only your custom rules. Current requirements is the normal document scope. Add persistent custom rules through this co-worker's Job knowledge rules/ folder, not saved explanation preferences.
+Choose **Use your own data** and select a local folder containing source and requirements. I’ll prepare the rules from the current requirements and any custom rules. Once you approve them, I’ll assign checks to the specialists. You can change the rule source in **Configure** and add custom rules in the Job knowledge rules/ folder.
 
 ## Try a sample or a walkthrough
 
-Choose **Start from sample data** to use the bundled task app and its specification. Review the extracted rule list when prompted. Verification begins after you approve the saved list, just as it does for your own project.
+Choose **Start from sample data** to use the bundled dispatch comparison. Review the extracted rule list when prompted. Verification begins after you approve the saved list, just as it does for your own project.
 
 ## What you can expect
 

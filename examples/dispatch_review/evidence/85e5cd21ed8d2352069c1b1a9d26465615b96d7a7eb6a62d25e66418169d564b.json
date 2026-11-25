@@ -1,0 +1,19 @@
+{
+  "schema_version": "mn.verification.execution.v1",
+  "check_id": "existing-lint",
+  "subject": "35f4ab578a7f43d527df8eabb3d9b8c2277cdec5f5b1188f1e73b10d4d0d7815",
+  "base_commit": "b11d8f9a7f17cc6d27cf7f02108f8b6b4164ed15",
+  "revision": "5b3cb5ffc645b2b388c3a652131bc5dd2b101cf8",
+  "artifact_sha256": null,
+  "target": "local-fixture",
+  "repository": "fixture/dispatch-queue",
+  "suite_sha256": "32ee6d61daf268a7e680e229ba8114370f6d30d96b45884af071ca71483d9298",
+  "runner_sha256": "b5d8885ad648cd9f93ee62479f2e00193b6b0d43f5cb301d683caf3024afffb6",
+  "fixture_sha256": "35f4ab578a7f43d527df8eabb3d9b8c2277cdec5f5b1188f1e73b10d4d0d7815",
+  "cases": {
+    "selected-lint-rules": [
+      "passed"
+    ]
+  },
+  "test_id": "ruff 0.15.22 · E4,E7,E9,F"
+}

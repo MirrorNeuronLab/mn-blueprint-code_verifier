@@ -1,8 +1,11 @@
 """Core child rounds for admitted checks. Only the runtime dispatches work."""
+from mn_comparison_evidence_skill import read_ledger
 from mn_sdk.blueprint.inputs import configured_input_path
-from mn_verification_checks_skill import ROLES, assignment, execute, make_plan, reconcile, scope_config, specialist_report
+from mn_verification_checks_skill import ROLES, assignment, digest, execute, make_plan, reconcile, scope_config, specialist_report
 
-from . import delegation
+from .wit_verification import reconcile as wit_reconcile
+from . import aspects, delegation
+from .assurance_basis import read_basis
 from .rule_review import require_approved_rules
 
 
@@ -37,9 +40,16 @@ def initialize(block, inputs):
     plan = make_plan(sources, request.get("verification_scope"), run_id=block.run_id,
                      comparison=comparison, baseline_sources=baseline_sources(block, capture),
                      omitted=capture.get("omitted", ()), evidence_folder=request.get("evidence_folder"))
-    packet = {"plan": block.store.commit("verification-plan.json", plan).to_dict(),
+    ledger = read_ledger(request.get("evidence_folder"), request.get("assurance_evidence_sha256"), plan, sources)
+    plan["assurance_basis"] = read_basis(request.get("evidence_folder"), request.get("assurance_basis_sha256"), plan, ledger, sources)
+    plan["observation_digest"] = ledger["digest"]
+    plan["aspect_roles"] = [role for role in ROLES if aspects.applicable(role, aspects.scope(ledger, role), plan["paths"])]
+    plan["plan_id"] = digest({k: v for k, v in plan.items() if k != "plan_id"})
+    packet = {"observations": block.store.commit("specialists/observations.json", ledger).to_dict(),
+              "plan": block.store.commit("verification-plan.json", plan).to_dict(),
               "capture": previous["capture"], "approval": approval}
-    delegated = delegation.assign(block, plan, sources, baseline_sources(block, capture))
+    delegated = delegation.assign(block, plan, sources, baseline_sources(block, capture),
+                                  ledger=ledger, evidence_folder=request.get("evidence_folder"))
     if delegated:
         packet["delegated"] = delegated
     return {"packet": block.store.commit("specialists/admission.json", packet).to_dict()}
@@ -61,6 +71,14 @@ def _attempts(block, plan):
     return records
 
 
+def absent_roles(block):
+    payload = block.original_config.get("inputs", {}).get("payload", {})
+    if not payload.get("collaboration_group_id"):
+        return set()
+    connected = {peer["blueprintId"] for peer in payload.get("collaboration_peers", [])}
+    return {role for role in ROLES if role + "_verifier" not in connected}
+
+
 def _nodes(block, packet_ref, plan, revision, delegated):
     prior = []
     for i in range(revision):
@@ -71,9 +89,10 @@ def _nodes(block, packet_ref, plan, revision, delegated):
     latest = {row["check_id"]: row for row in records}
     tasks = []
     external = {ident for item in delegated.values() for ident in item["checks"]}
+    absent = absent_roles(block)
     for check in plan["checks"]:
         ident = check["id"]
-        if ident in external:
+        if ident in external or check["specialist"] in absent:
             continue
         # Measure a schema only after its separately planned behavior examples pass.
         preconditions = [other["id"] for other in plan["checks"] if check["kind"] == "schema_workload"
@@ -91,7 +110,8 @@ def _nodes(block, packet_ref, plan, revision, delegated):
                       "input": {"packet": packet_ref, "assignment": task}})
     if tasks:
         return tasks
-    selected = {c["specialist"] for c in plan["checks"] if c["id"] not in external}
+    selected = {c["specialist"] for c in plan["checks"] if c["id"] not in external} - absent
+    selected |= set(plan.get("aspect_roles", ())) - set(delegated) - absent
     reported = {a["specialist"] for a in assignments if a.get("operation") == "report"}
     return [{"id": "report-" + role, "template": "inspect_" + role, "label": ROLES[role] + " report",
              "needs": [], "input": {"packet": packet_ref, "assignment": _report_assignment(plan, role)}}
@@ -133,8 +153,10 @@ def _inspect(block, inputs, specialist):
     if task == _report_assignment(plan, specialist):
         path = f"specialists/reports/{specialist}.json"
         def publish():
-            return {"plan_id": plan["plan_id"], "subject": plan["subject"],
-                    "view": specialist_report(_rollup(block, plan), specialist)}
+            ledger = block.store.read(packet["observations"]) if packet.get("observations") else aspects.EMPTY
+            facet = aspects.evaluate(block, specialist, aspects.scope(ledger, specialist), plan, candidate_sources(capture))
+            return {"plan_id": plan["plan_id"], "subject": plan["subject"], "aspect": facet,
+                    "view": aspects.with_observations(specialist_report(_rollup(block, plan), specialist), facet)}
         ref = block.freeze_checkpoint(path, publish)
         block.store.commit(path + ".receipt.json", ref.to_dict(), kind="specialist_report_receipt")
         return {"result_ref": ref.to_dict()}
@@ -167,7 +189,7 @@ def inspect_reliability(block, inputs):
 
 def _rollup(block, plan, external=()):
     records = [*_attempts(block, plan), *external]
-    report = reconcile(plan, records)
+    report = wit_reconcile(block, plan, records)
     completed = {row["id"] for row in report["checks"] if row["status"] == "passed"}
     for row in report["checks"]:
         if row["attempts"] or row["kind"] != "schema_workload":
@@ -187,8 +209,12 @@ def summarize(block, inputs):
     packet = block.read_evidence(inputs["input"]["seed"]["packet"])
     plan = block.store.read(packet["plan"])
     delegated = packet.get("delegated", {})
-    records, pending = delegation.collect(block, plan, delegated)
+    records, pending, returned = delegation.await_current(block, plan, delegated)
     report = _rollup(block, plan, records)
+    absent = absent_roles(block)
+    for row in report["checks"]:
+        if row["specialist"] in absent:
+            row["reason"] = f"{ROLES[row['specialist']]} is outside this collaboration group."
     earlier = delegation.earlier_results(block, delegated)
     if earlier:
         report["earlier_delegations"] = earlier
@@ -198,13 +224,21 @@ def summarize(block, inputs):
         for row in report["checks"]:
             if row["specialist"] in pending and row["id"] in delegated[row["specialist"]]["checks"]:
                 row["reason"] = "Awaiting the dedicated verifier’s mailbox reply."
+    report["aspects"] = {role: {"status": "received", "data": data} for role, data in returned.items()}
+    for role in absent:
+        report["aspects"][role] = {"status": "removed"}
+    for role in pending:
+        report["aspects"][role] = {"status": "pending"}
     refs = {}
-    for role in dict.fromkeys(c["specialist"] for c in plan["checks"]):
+    for role in ROLES:
         path = f"specialists/reports/{role}.json"
         if block.store.path(path + ".receipt.json").is_file():
             ref = block.store.read_path(path + ".receipt.json")
-            block.read_checkpoint(ref, expected_path=path)
-            refs[role] = ref
+            local = block.read_checkpoint(ref, expected_path=path)
+            if role not in delegated and role not in absent:
+                if "aspect" in local:
+                    report["aspects"][role] = {"status": "local", "data": local["aspect"]}
+                refs[role] = ref
     ref = block.store.commit("specialists/report.json", report)
     return {"report": ref.to_dict(), "views": refs, "approval": packet["approval"], "capture": packet["capture"]}
 
@@ -215,7 +249,7 @@ def missing_report(block, capture):
     plan = make_plan(candidate_sources(capture), scope_config(request.get("verification_scope")),
                      run_id=block.run_id, comparison=capture.get("comparison"), omitted=capture.get("omitted", []),
                      evidence_folder=request.get("evidence_folder"))
-    report = reconcile(plan, [])
+    report = wit_reconcile(block, plan, [])
     report["blockers"].append("The specialist workflow did not return a verified completion record.")
     report["verdict"] = "INCONCLUSIVE"
     return report

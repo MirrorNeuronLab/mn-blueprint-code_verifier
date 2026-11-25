@@ -1,4 +1,4 @@
-"""Code verifier's source authority policy; retrieval mechanics live in skills."""
+"""Software verifier suite's source authority policy; retrieval mechanics live in skills."""
 from collections import Counter
 from pathlib import PurePosixPath
 

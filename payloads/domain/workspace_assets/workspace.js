@@ -27,7 +27,11 @@ const mappingLabels = {
   rule_missing: "Rule absent from this review",
 };
 const initial = new URLSearchParams(location.hash.slice(1));
+const assuranceTabs = (report.assurance?.sections || []).map(({id, title}) => [
+  "assurance-" + id, title, "assurance-" + id,
+]);
 const viewNames = [
+  ...assuranceTabs.map(([id]) => id),
   "overview",
   ...specialists.map((specialist) => specialist.id),
   "results",
@@ -35,9 +39,12 @@ const viewNames = [
   "scope",
   ...(ci ? ["ci"] : []),
 ];
-let view = viewNames.includes(initial.get("view"))
-  ? initial.get("view")
-  : "overview";
+function route(params) {
+  const tab = "assurance-" + params.get("section");
+  if (assuranceTabs.some(([id]) => id === tab)) return tab;
+  return viewNames.includes(params.get("view")) ? params.get("view") : assuranceTabs[0]?.[0] || "overview";
+}
+let view = route(initial);
 let filter = "all";
 let query = "";
 let page = 0;
@@ -522,35 +529,46 @@ const views = {
   scope,
   ci: ciView,
 };
+const explorerTabs = [
+  ["overview", assuranceTabs.length ? "Evidence explorer" : "Overview", "content"],
+  ...specialists.map((s) => [s.id, s.label, "content"]),
+  ["results", "Rule results", "content"],
+  ["rules", "Approved rules", "content"],
+  ["scope", "Scope and limits", "content"],
+  ...(ci ? [["ci", "CI evidence", "content"]] : []),
+];
 const ui = MNWebReport.createReport({
-  tabs: [
-    ["overview", "Overview", "content"],
-    ...specialists.map((s) => [s.id, s.label, "content"]),
-    ["results", "Rule results", "content"],
-    ["rules", "Approved rules", "content"],
-    ["scope", "Scope and limits", "content"],
-    ...(ci ? [["ci", "CI evidence", "content"]] : []),
-  ],
+  tabs: assuranceTabs.length ? [...assuranceTabs, explorerTabs[0]] : explorerTabs,
+  view: assuranceTabs.length && !view.startsWith("assurance-") ? "overview" : view,
   primaryCount: 5,
   navigationLabel: "Verification views",
   actions: [
-    {
-      id: "report",
-      label: "Download Markdown",
-      icon: "download",
-      href: "../report.md",
-    },
-    { id: "rules", label: "Download editable rules", href: "../rules.md" },
+    ...(assuranceTabs.length ? [
+      { id: "print", label: "Print all sections" },
+      { id: "export", label: "Export HTML", icon: "download" },
+      ...(data.downloads?.report ? [{ id: "report", label: "Download Markdown", icon: "download" }] : []),
+      ...(data.downloads?.rules ? [{ id: "rules", label: "Download editable rules" }] : []),
+      { id: "explore", label: "Open evidence explorer" },
+    ] : [
+      { id: "report", label: "Download Markdown", icon: "download", href: "../report.md" },
+      { id: "rules", label: "Download editable rules", href: "../rules.md" },
+    ]),
     { id: "details", label: "Report details", icon: "info" },
   ],
   onView(next) {
     setView(next);
   },
-  onAction(_id, trigger) {
+  onAction(id, trigger) {
+    if (id === "print") return window.print();
+    if (id === "export") return downloadReportFile("software-verification-report.html", originalReportHtml, "text/html;charset=utf-8");
+    if (id === "report" || id === "rules") return downloadReportFile(id + ".md", data.downloads[id], "text/markdown;charset=utf-8");
+    if (id === "explore") return setView("overview");
     ui.openInspector(
       "Report details",
       `<p>${plural(report.rules.length, "approved rule")}</p>
-      <dl class="scope-facts"><div><dt>Snapshot</dt><dd><code>${esc(report.snapshot_id)}</code></dd></div></dl>`,
+      <dl class="scope-facts"><div><dt>Snapshot</dt><dd><code>${esc(report.snapshot_id)}</code></dd></div>
+      ${report.assurance?.digest ? `<div><dt>Case evidence SHA-256</dt><dd><code>${esc(report.assurance.digest)}</code></dd></div>` : ""}
+      ${report.assurance?.basis_digest ? `<div><dt>Collection record SHA-256</dt><dd><code>${esc(report.assurance.basis_digest)}</code></dd></div>` : ""}</dl>`,
       trigger,
     );
   },
@@ -559,8 +577,15 @@ const ui = MNWebReport.createReport({
   },
 });
 
+function viewLocation(next) {
+  return new URLSearchParams(next.startsWith("assurance-") ? {section: next.slice("assurance-".length)} : {view: next});
+}
+
 function saveLocation(ruleId) {
-  const params = new URLSearchParams({ view });
+  const current = new URLSearchParams(location.hash.slice(1));
+  const params = viewLocation(view);
+  if (params.has("section") && params.get("section") === current.get("section") && current.has("case"))
+    params.set("case", current.get("case"));
   if (ruleId) params.set("rule", ruleId);
   const hash = "#" + params;
   if (location.hash !== hash) history.replaceState(null, "", hash);
@@ -568,24 +593,41 @@ function saveLocation(ruleId) {
 
 function setView(next) {
   if (!viewNames.includes(next)) return;
+  if (assuranceTabs.length && next !== view) history.pushState(null, "", "#" + viewLocation(next));
   view = next;
   page = 0;
   render();
 }
 
-function render() {
-  ui.setView(view);
+function render(syncLocation = true) {
+  const exploring = assuranceTabs.length && !view.startsWith("assurance-");
+  ui.setView(exploring ? "overview" : view);
   ui.setInspectorOpen(false);
   const host = document.getElementById("content");
+  if (assuranceTabs.length) {
+    const panels = document.getElementById("report-content");
+    const isSection = assuranceTabs.some(([id]) => id === view);
+    host.hidden = isSection;
+    panels.toggleAttribute("data-explorer", !isSection);
+    for (const [id] of assuranceTabs)
+      document.getElementById(id).toggleAttribute("data-report-inactive", id !== view);
+    if (isSection) {
+      if (syncLocation) saveLocation();
+      return;
+    }
+  }
   const notice =
     gaps.length && report.rules.length
       ? `<aside class="coverage-notice" role="status">
     <p><strong>Partial extraction</strong> · ${plural(gaps.length, "document section")} still need review.</p>
     ${button("Review scope", "view", "scope")}</aside>`
       : "";
-  host.innerHTML = notice + views[view]();
+  const links = exploring ? `<nav aria-label="Evidence explorer views" class="source-actions">${explorerTabs.map(
+    ([id, label]) => id === view ? `<strong aria-current="page">${esc(label)}</strong>` : button(label, "view", id)
+  ).join(" ")}</nav>` : "";
+  host.innerHTML = links + notice + views[view]();
   ui.enhance(host);
-  saveLocation();
+  if (syncLocation) saveLocation();
 }
 
 function evidenceList(result, side, ruleId) {
@@ -652,7 +694,7 @@ function inspectRule(id, trigger) {
         ${ref.quote ? `<blockquote>${esc(ref.quote)}</blockquote>` : ""}</div>`,
         )
         .join("")}
-      <p class="review-meta">Static review · Tests not executed by Code verifier</p>
+      <p class="review-meta">Static review · Tests not executed by Software verifier suite</p>
     </details>
   </div>`,
     trigger,
@@ -749,6 +791,16 @@ document.addEventListener("submit", (event) => {
   document.getElementById("rule-query")?.focus();
 });
 
+function restoreLocation(params) {
+  view = route(params);
+  page = 0;
+  render(false);
+  if (params.has("rule")) inspectRule(params.get("rule"));
+  else if (assuranceTabs.length) showAssuranceCase(params);
+}
+
 ui.ready();
-render();
-if (initial.has("rule")) inspectRule(initial.get("rule"));
+if (assuranceTabs.length) {
+  window.addEventListener("hashchange", () => restoreLocation(new URLSearchParams(location.hash.slice(1))));
+}
+restoreLocation(initial);

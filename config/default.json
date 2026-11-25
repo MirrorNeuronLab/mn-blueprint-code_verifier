@@ -8,11 +8,13 @@
       "goal_id": "software-verification",
       "common_goal": "",
       "collaboration_group_id": "",
-      "collaboration_peers": []
+      "collaboration_peers": [],
+      "assurance_evidence_sha256": "",
+      "assurance_basis_sha256": ""
     }
   },
   "outputs": {
-    "folder_path": "~/Downloads/code-verifier"
+    "folder_path": "~/Downloads/software-verifier-suite"
   },
   "review": {
     "rules_mode": "augment",

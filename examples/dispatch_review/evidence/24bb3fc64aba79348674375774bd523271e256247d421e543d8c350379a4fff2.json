@@ -1,0 +1,33 @@
+{
+  "schema_version": "mn.verification.execution.v1",
+  "check_id": "existing-units",
+  "subject": "35f4ab578a7f43d527df8eabb3d9b8c2277cdec5f5b1188f1e73b10d4d0d7815",
+  "base_commit": "b11d8f9a7f17cc6d27cf7f02108f8b6b4164ed15",
+  "revision": "5b3cb5ffc645b2b388c3a652131bc5dd2b101cf8",
+  "artifact_sha256": null,
+  "target": "local-fixture",
+  "repository": "fixture/dispatch-queue",
+  "suite_sha256": "693ab4656ba4b26df47b7e2088f8294790d6f7c32f8bf4f523574848ce81ce14",
+  "runner_sha256": "f684f951d5f9a03f4d93511a2241c8d645e9c1d7f132e075925042c4a8ed1a31",
+  "fixture_sha256": "35f4ab578a7f43d527df8eabb3d9b8c2277cdec5f5b1188f1e73b10d4d0d7815",
+  "cases": {
+    "test_display_label": [
+      "passed"
+    ],
+    "test_short_label": [
+      "passed"
+    ],
+    "test_label_available": [
+      "passed"
+    ]
+  },
+  "test_id": "pytest 8.4.2",
+  "observations": {
+    "test_counts": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "inconclusive": 0
+    }
+  }
+}

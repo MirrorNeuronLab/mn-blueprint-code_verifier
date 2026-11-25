@@ -8,9 +8,27 @@
       },
       "inputs": {
         "verification_scope": {
-          "$ref": "run_input",
+          "$ref": "upstream",
+          "step_id": "admit_verification_scope",
           "path": [
+            "result",
             "verification_scope"
+          ]
+        },
+        "assurance_evidence_sha256": {
+          "$ref": "upstream",
+          "step_id": "admit_verification_scope",
+          "path": [
+            "result",
+            "assurance_evidence_sha256"
+          ]
+        },
+        "assurance_basis_sha256": {
+          "$ref": "upstream",
+          "step_id": "admit_verification_scope",
+          "path": [
+            "result",
+            "assurance_basis_sha256"
           ]
         }
       },

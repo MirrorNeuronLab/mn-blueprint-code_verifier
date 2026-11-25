@@ -1,0 +1,22 @@
+{
+  "schema_version": "mn.verification.execution.v1",
+  "check_id": "blank-label-repair",
+  "subject": "35f4ab578a7f43d527df8eabb3d9b8c2277cdec5f5b1188f1e73b10d4d0d7815",
+  "base_commit": "b11d8f9a7f17cc6d27cf7f02108f8b6b4164ed15",
+  "revision": "5b3cb5ffc645b2b388c3a652131bc5dd2b101cf8",
+  "artifact_sha256": null,
+  "target": "local-fixture",
+  "repository": "fixture/dispatch-queue",
+  "suite_sha256": "11938180cc37e538abd4bb534ff1955bb26d0dd61555b96da1fbb73fc559291f",
+  "runner_sha256": "8d12b7bc2d7719c9206e7dbc25858cb90a684515864e1cdff003fa677d351be8",
+  "fixture_sha256": "35f4ab578a7f43d527df8eabb3d9b8c2277cdec5f5b1188f1e73b10d4d0d7815",
+  "cases": {
+    "original-label-rejects-blank": [
+      "passed"
+    ],
+    "detects-accept-blank-control": [
+      "passed"
+    ]
+  },
+  "test_id": "Python"
+}

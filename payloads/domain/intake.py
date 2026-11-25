@@ -2,7 +2,7 @@
 import os
 from pathlib import Path
 
-from mn_code_search_skill import TextSearchIndex
+from mn_sdk.blueprint.wasm import invoke_component
 from mn_static_code_analysis_skill import SUPPORTED_EXTENSIONS, analyze_sources
 from mn_sdk.blueprint.hooks import report_activity
 from mn_sdk.blueprint.inputs import capture_declared_inputs
@@ -124,7 +124,7 @@ def capture_sources(block, inputs):
         omitted = [{**item, 'path': repository_prefix + item['path']} for item in omitted]
     if comparison is not None:
         comparison['changes'] = changed_files(baseline_sources, sources)
-        comparison['base']['snapshot_id'] = TextSearchIndex(baseline_sources).snapshot_id
+        comparison['base']['snapshot_id'] = invoke_component("snapshot", {"sources": baseline_sources}, environment=block.environment)["subject"]
     knowledge = block.job_directory / 'knowledge' / 'rules'
     custom = {}
     if knowledge.is_symlink() or knowledge.parent.is_symlink():
@@ -136,10 +136,10 @@ def capture_sources(block, inputs):
         if any(Path(p).suffix.lower() != '.md' for p in custom):
             raise ValueError('Custom rules must be Markdown files.')
     sources.update({'knowledge/rules/' + p: v for p, v in custom.items()})
-    index = TextSearchIndex(sources)
+    snapshot_id = invoke_component("snapshot", {"sources": sources}, environment=block.environment)["subject"]
     docs = [p for p in sources if Path(p).suffix.casefold() in DOCUMENT_EXTENSIONS and not p.startswith('knowledge/')]
     value = {'schema_version': 'mn.software_rules.capture.v1', 'sources': sources,
-             'snapshot_id': index.snapshot_id, 'documents': docs,
+             'snapshot_id': snapshot_id, 'documents': docs,
              'custom_documents': ['knowledge/rules/' + p for p in custom], 'omitted': omitted,
              'source_execution': False, 'repository_prefix': repository_prefix}
     if comparison is not None:

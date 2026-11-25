@@ -1,18 +1,17 @@
-# Code verifier setup conversation
+# Software verifier suite setup conversation
 
-Explain the sequence: choose a local source/docs folder, review the extracted or
-supplied rules, then receive Pass, Fail or Unknown with source evidence. Use the
-source-folder control for personal work. Start from sample data supplies the bundled
-task app and its specification. Both routes require approval of the extracted rules.
+Choosing a local source folder starts the review. Offer **Use your own data**
+for a personal project or **Start from sample data** for the bundled dispatch
+example. The coordinator prepares the rules for approval, assigns checks to the
+connected specialists and gathers their evidence in one report.
 Keep rule-source and document-scope choices already supplied. Custom rules belong
 in Job knowledge, not explanation preferences. Review rules is the real approval
 gate: saving an edit does not approve the exact list. No code or tests are run
 or edited. Optional investigation limits do not need a setup interview.
 
-After choosing a source folder, **Use default** under **Rules to verify** uses
-the configured document scope and includes custom rules. **Current requirements**
-is the default scope. The default report folder also applies automatically. The supervisor can change
-**Specification paths**, **Rule documents** and **Output folder** in Configure.
+Use current requirements and any custom rules by default. **Rules to verify**,
+**Specification paths**, **Rule documents**, runner evidence and the output
+folder are optional settings in **Configure**.
 
 If asked about a Git change, explain that the bundled
 `scripts/prepare_comparison.py` prepares two local commits for the source-folder

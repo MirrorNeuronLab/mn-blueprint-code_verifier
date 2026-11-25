@@ -1,4 +1,14 @@
-# Software verifier manual
+# Software verifier suite manual
+
+## Reviewing the suite report
+
+Choose **Sample dispatch review** for a fictional comparison with recorded evidence, or select your own source. To add case observations, put the independently recorded ledger in **Runner evidence folder** as `<sha256>.json` and enter its digest in **Case evidence SHA-256**. Each specialist receives its own cases. A removed or late specialist leaves its section incomplete. The coordinator retains late replies under their originating review.
+
+The five views use the shared offline report template. The first view shows the release decision, the comparison checks with receipts, and the approved passages each case covers. **Verified defects** counts distinct repeatable behavior. Configuration mismatches and test controls have separate evidence. **Actions** offers **Print all sections**, **Export HTML** and the **Evidence explorer** for detailed checks and source review.
+
+Optionally supply **Report context SHA-256** to identify the collection method, link implementation lines and bind existing tests, lint, CI, AI review or a proposed test repair to the exact run records. Missing comparisons stay unmeasured. Changing an approved requirement invalidates its passage-based case match.
+
+See the [dispatch example](../examples/dispatch_review/README.md) for the ledger contract.
 
 Open the web report for the combined verdict. Select Functional verifier, Security verifier, Compatibility verifier or Reliability verifier to see its criteria, check outcomes and evidence. Select each co-worker independently in the catalog to run the same checks for one domain. Use Verification scope for approved examples, target contracts, workload budgets or runner evidence digests.
 
@@ -6,7 +16,7 @@ Open the web report for the combined verdict. Select Functional verifier, Securi
 
 I check the rules you approve against captured source code and explain which are supported, contradicted or still unknown.
 
-Choose **Start from sample data** for the bundled task app. For your own project, select a local folder containing source and specifications or Markdown documentation. Choose whether to extract documentation rules plus custom rules, or verify only your custom rules. Current requirements is the normal document scope. Add persistent custom rules through this co-worker's Job knowledge rules/ folder, not saved explanation preferences.
+Choose **Use your own data** and select a source code folder to start. The coordinator prepares rules from current requirements and any custom rules. After you approve them, it assigns checks to the specialists. You can change the rule source in **Configure** and add custom rules in the Job knowledge rules/ folder. **Start from sample data** uses the bundled dispatch comparison.
 
 For a Git change, select the folder created by the blueprint's
 `scripts/prepare_comparison.py` helper. Select **Specification paths** to
@@ -75,7 +85,7 @@ Documentation, test definitions and missing search hits are not execution proof.
 Confidence is an uncalibrated AI assessment, capped at 0.85 for static judgments.
 Review cited source, omissions and limitations before making decisions.
 
-The normal output folder is ~/Downloads/code-verifier, with each run
+The normal output folder is ~/Downloads/software-verifier-suite, with each run
 in its runtime-delivered timestamp folder. Rules, full structured results,
 captured source, hashes, syntax coverage and investigations accompany report.md.
 Open the completed run's web report in this conversation to inspect rule results
@@ -107,10 +117,10 @@ Use the selected run report and exact source/rule references. Documentation and 
 
 ## Delegate to dedicated verifiers
 
-Save a collaboration group with Software verifier as manager and the dedicated
-verifiers you want to use. After you approve the rules, the manager selects
+Hiring Software verifier suite connects the manager and its four dedicated
+verifiers on a collaboration board. Everyone stays idle until you start a review.
+Open the suite chat to read messages from the whole team and answer each co-worker directly. After you approve the rules, the manager selects
 eligible checks and queues them for the matching specialists. It retains
-dependent checks and checks for roles outside the group. A specialist processes
-one assignment on its next run. Results available during the review appear in
+dependent checks for connected roles. Removing a specialist leaves its checks uncovered. Each assignment starts a run of its specialist. Results available during the review appear in
 its report. Later results appear in the manager's mailbox and are reconciled
 under their original review on a subsequent manager run.

@@ -23,7 +23,7 @@
     "benefit": "Find documented behavior a change breaks and see how to check it.",
     "how_it_works": "Captures the source, requests rule approval, plans eligible specialist checks and reconciles their observations in one report.",
     "input": "A local source folder or a prepared Git comparison. Optional Markdown rules and mapped JUnit evidence.",
-    "output": "A consolidated verification verdict with four specialist tabs, source citations and a complete attempt inventory.",
+    "output": "Five report sections with verified defects, source citations and specialist evidence.",
     "runtime_features": [
       "Read-only source capture",
       "Editable Markdown rules",
@@ -50,7 +50,7 @@
       "peersKey": "inputs.payload.collaboration_peers",
       "maxMembers": 5,
       "sameRuntime": false,
-      "managerBlueprintId": "code_verifier",
+      "managerBlueprintId": "software_verifier_suite",
       "delivery": "mailbox"
     }
   }

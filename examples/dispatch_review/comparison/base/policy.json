@@ -1,0 +1,4 @@
+{
+  "reviewer": {"read draft": "allow", "archive draft": "deny"},
+  "supervisor": {"read draft": "allow", "archive draft": "allow"}
+}

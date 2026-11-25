@@ -1,0 +1,13 @@
+{
+  "schema_version": "mn.code_verifier.comparison.v1",
+  "base": {
+    "commit": "b11d8f9a7f17cc6d27cf7f02108f8b6b4164ed15",
+    "sha256": "b11d8f9a7f17cc6d27cf7f02108f8b6b4164ed156497dd0afa34efe714e64747",
+    "omitted": 0
+  },
+  "head": {
+    "commit": "5b3cb5ffc645b2b388c3a652131bc5dd2b101cf8",
+    "sha256": "5b3cb5ffc645b2b388c3a652131bc5dd2b101cf8632773569dd081527480cf30",
+    "omitted": 0
+  }
+}

@@ -1,6 +1,6 @@
 {
   "$schema": "https://mirrorneuron.io/schemas/blueprint/v1/contracts.schema.json",
-  "summary": "Approved rule review and four specialist verification reports for the same captured subject.",
+  "summary": "Five assurance sections combine the approved source review, four specialist evidence records and coordinator-verified defects.",
   "inputs": {
     "input_folder": {
       "type": "local_path",
@@ -73,6 +73,18 @@
       "type": "array",
       "required": false,
       "description": "Group members for co-worker collaboration."
+    },
+    "assurance_evidence_sha256": {
+      "type": "string",
+      "required": false,
+      "privacy": "confidential",
+      "description": "SHA-256 of the independent case ledger in the runner evidence folder."
+    },
+    "assurance_basis_sha256": {
+      "type": "string",
+      "required": false,
+      "privacy": "confidential",
+      "description": "Optional SHA-256 of the context that links case evidence to its collection method and reference checks."
     }
   },
   "outputs": {

@@ -1,11 +1,15 @@
 {
   "$schema": "https://mirrorneuron.io/schemas/blueprint/v1/manifest.schema.json",
-  "id": "code_verifier",
-  "name": "Software verifier",
+  "id": "software_verifier_suite",
+  "coworker_type": "suite",
+  "model_requirement": {
+    "model": "default"
+  },
+  "name": "Software verifier suite",
   "tagline": "Coordinate verification across four specialists",
   "payload_api": "mn.blueprint.v1",
-  "version": "4.2.0",
-  "description": "Review approved source rules and coordinate functional, security, compatibility and reliability checks. Inspect each specialist’s evidence in one report.",
+  "version": "4.3.0",
+  "description": "Coordinate four specialists to verify functional intent, service integrations, authorization and test quality. Consolidate repeated evidence into distinct verified defects.",
   "workflow": "workflow.json",
   "execution": "execution.json",
   "contracts": "contracts.json",
@@ -44,10 +48,6 @@
     },
     "mn.mcp": {
       "file": "extensions/mcp.json",
-      "required": true
-    },
-    "mn.blocks": {
-      "file": "extensions/blocks.json",
       "required": true
     }
   }

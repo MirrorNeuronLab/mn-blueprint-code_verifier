@@ -1,0 +1,46 @@
+/* Domain content sits inside the shared report header, navigation and surface. */
+.assurance-section {
+  display: grid;
+  gap: var(--od-gap);
+}
+.assurance-section :is(h2, h3, h4, p) {
+  margin: 0;
+}
+.assurance-section h2 { font-size: var(--od-text-heading); }
+.assurance-section h3 { font-size: var(--od-text-subheading); }
+.assurance-section h4 { font-size: var(--od-text-body); }
+.assurance-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  column-gap: var(--od-gap);
+}
+.assurance-group, .assurance-finding {
+  display: grid;
+  min-width: 0;
+  gap: var(--od-gap);
+}
+.assurance-group { margin-block-start: var(--od-gap); }
+.assurance-section .report-table { max-width: 100%; min-width: 0; }
+.assurance-section :is(td, th, code, summary, button) { overflow-wrap: anywhere; }
+.assurance-section .report-table :is(th, td) { white-space: normal; }
+.assurance-case > :not(summary), .assurance-receipt > :not(summary) { margin-block-start: var(--od-gap); }
+.assurance-section .source-ref { max-width: 100%; font-size: var(--od-text-meta); white-space: normal; }
+.assurance-section .report-details { margin: 0; }
+.assurance-case { scroll-margin-block: calc(var(--od-header-height) + var(--od-gap)); }
+.assurance-section table button { height: auto; min-height: 0; }
+@media screen {
+  #report-content[data-explorer], .assurance-print { display: none; }
+}
+@media print {
+  body:has(#report-content) :is(#content, #notice, .report-footer) { display: none; }
+  .assurance-section { display: block; }
+  .assurance-section .assurance-case, .assurance-section > details, .assurance-receipt > :not(summary) { display: none; }
+  .assurance-section + .assurance-section { break-before: page; }
+  .assurance-section :is(h3, h4) { break-after: avoid; }
+  .assurance-section :is(tr, .assurance-finding) { break-inside: avoid; }
+  .assurance-section .vbg-table-wrap { overflow: visible; }
+  .assurance-group { display: block; }
+  .assurance-group > * + *, .assurance-section > * + * { margin-block-start: var(--od-gap); }
+  .assurance-case > summary, .assurance-section .report-details > summary { list-style: none; }
+  .assurance-section a { color: inherit; }
+}

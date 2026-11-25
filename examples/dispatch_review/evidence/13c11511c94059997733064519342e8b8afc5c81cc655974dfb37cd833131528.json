@@ -1,0 +1,109 @@
+{
+  "schema": "otterdesk.assurance-basis.v1",
+  "subject": "35f4ab578a7f43d527df8eabb3d9b8c2277cdec5f5b1188f1e73b10d4d0d7815",
+  "baseline_subject": "4ca8e4e2e56ce07ba9ee1bd9bea956a9c21036a7cea07652911bf8db79432a6b",
+  "case_digest": "d37e8880cb9d2d5f61c969bf14bccee5c77318f7def816c8db181bdcc501e3ff",
+  "origin": "fixture",
+  "boundary": "in_process",
+  "policy": "configuration",
+  "collection": "The bundled recorder exercised two fictional revisions locally. Workflow and integration views share the same dispatch runs.",
+  "gates": {
+    "unit_tests": "existing-units",
+    "lint": "existing-lint"
+  },
+  "locations": {
+    "workflow-retry": [
+      {
+        "path": "dispatch.py",
+        "line": 5
+      },
+      {
+        "path": "delivery.py",
+        "line": 18
+      }
+    ],
+    "boundary-retry": [
+      {
+        "path": "dispatch.py",
+        "line": 5
+      },
+      {
+        "path": "delivery.py",
+        "line": 18
+      }
+    ],
+    "workflow-new": [
+      {
+        "path": "dispatch.py",
+        "line": 5
+      },
+      {
+        "path": "delivery.py",
+        "line": 18
+      }
+    ],
+    "boundary-new": [
+      {
+        "path": "dispatch.py",
+        "line": 5
+      },
+      {
+        "path": "delivery.py",
+        "line": 18
+      }
+    ],
+    "label-trim": [
+      {
+        "path": "dispatch.py",
+        "line": 10
+      }
+    ],
+    "label-blank": [
+      {
+        "path": "dispatch.py",
+        "line": 10
+      }
+    ],
+    "reviewer-read": [
+      {
+        "path": "policy.json",
+        "line": 2
+      }
+    ],
+    "reviewer-archive": [
+      {
+        "path": "policy.json",
+        "line": 2
+      }
+    ],
+    "supervisor-archive": [
+      {
+        "path": "policy.json",
+        "line": 3
+      }
+    ],
+    "control-padding": [
+      {
+        "path": "test_dispatch.py",
+        "line": 4
+      },
+      {
+        "path": "dispatch.py",
+        "line": 10
+      }
+    ],
+    "control-blank": [
+      {
+        "path": "test_dispatch.py",
+        "line": 4
+      },
+      {
+        "path": "dispatch.py",
+        "line": 10
+      }
+    ]
+  },
+  "repair_checks": {
+    "control-blank": "blank-label-repair"
+  }
+}

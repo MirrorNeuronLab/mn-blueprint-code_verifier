@@ -9,6 +9,7 @@ from mn_sdk.blueprint.hooks import report_activity
 from mn_sdk_common.publication import ArtifactWrite
 from mn_sdk.blueprint.outputs import publish_artifact_bundle, publish_files
 
+from . import assurance
 from .artifacts import read, save
 from .publication import deliver_reports
 from .configuration import BLUEPRINT_ID
@@ -173,12 +174,15 @@ def publish(block, inputs):
         final['comparison'] = {**{key: value for key, value in comparison.items() if key != 'ci'}, **verification['comparison']}
     if ci:
         final['ci_evidence'] = ci
-    from mn_web_report_skill import render_report_markdown
+    from mn_sdk.blueprint.wasm import invoke_component
     final.update(combined)
-    if combined["verdict"] != "PASS":
+    final["assurance"] = assurance.assemble(final, prefix=capture.get("repository_prefix", ""))
+    final["assurance"]["decision_label"] = assurance.apply_decision(final, final["assurance"])
+    if final["verdict"] != "PASS":
         final["assessment_status"] = "needs_review"
-    summary_lines = ["# Software verification report", "", f"**Verdict: {combined['verdict']}**", ""]
+    summary_lines = ["# Software verification report", "", f"**Verdict: {final['verdict']}**", ""]
     summary_lines.extend(f"- {cell(reason)}" for reason in combined["reasons"])
+    summary_lines.extend(assurance.markdown(final["assurance"], cell))
     ledger = combined["specialist_report"]
     if ledger.get("earlier_delegations"):
         summary_lines += ["", "## Results from earlier reviews", ""]
@@ -202,7 +206,7 @@ def publish(block, inputs):
                                 "start_line": ref["line"], "end_line": ref.get("end_line", ref["line"])}
                     summary_lines.append(f"  - {name} {source_link(location)}")
     for specialist in combined["specialists"]:
-        summary_lines.extend(["", render_report_markdown(specialist["document"]).replace("# ", "## ", 1).strip()])
+        summary_lines.extend(["", invoke_component("report", {"document": specialist["document"]}, environment=block.environment)["markdown"].replace("# ", "## ", 1).strip()])
     lines = [*summary_lines, "", "## Source rule review", "", *lines[2:]]
     # Captured evidence is committed individually; large repositories do not
     # consume the publication bundle's limit of 128 top-level report artifacts.
@@ -218,10 +222,14 @@ def publish(block, inputs):
     encoded = json.dumps(final, sort_keys=True, ensure_ascii=False, allow_nan=False).encode("utf-8")
     revision = sha256(encoded).hexdigest()
 
+    markdown_text = "\n".join(lines) + "\n"
+    rules_text = block.store.path("rules.md").read_bytes()
+
     def page():
         try:
             from .workspace_web import render
-            return render(final, capture, baseline=baseline).encode("utf-8")
+            return render(final, capture, baseline=baseline,
+                          downloads={"report": markdown_text, "rules": rules_text.decode("utf-8")}).encode("utf-8")
         except Exception as error:
             save(block, "presentation-status.json", {"status": "unavailable", "error_type": type(error).__name__})
             raise
@@ -231,13 +239,13 @@ def publish(block, inputs):
         if not block.store.path("web/index.html").is_file():
             raise ValueError("Optional report page is unavailable.")
         return json.dumps(static_run_report_handle(block.store.run_dir, "web/index.html",
-            title="Code verification", optional=True)).encode("utf-8")
+            title="Software verification", optional=True)).encode("utf-8")
 
     receipt = publish_artifact_bundle(block, [
         ArtifactWrite("final_artifact", "final_artifact.json", encoded, kind="json", authoritative=True),
         ArtifactWrite("result", "result.json", encoded, kind="json", authoritative=True),
-        ArtifactWrite("report", "report.md", ("\n".join(lines) + "\n").encode("utf-8"), kind="markdown"),
-        ArtifactWrite("rules_markdown", "rules.md", block.store.path("rules.md").read_bytes(), kind="markdown", mode=0o644),
+        ArtifactWrite("report", "report.md", markdown_text.encode("utf-8"), kind="markdown"),
+        ArtifactWrite("rules_markdown", "rules.md", rules_text, kind="markdown", mode=0o644),
         ArtifactWrite("web_report", "web/index.html", page, kind="html", required=False, revision=revision),
         ArtifactWrite("web_ui", "web_ui.json", handle, kind="json", required=False, revision=revision, mode=0o644),
     ], receipt_path=block.root + "/publication.json")

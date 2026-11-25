@@ -11,14 +11,14 @@
         "path_kind": "directory",
         "role": "input",
         "required": true,
-        "description": "Choose a repository, a folder with source and docs, or a Git comparison folder prepared for Code verifier.",
+        "description": "Choose a repository, a folder with source and docs, or a Git comparison folder prepared for Software verifier suite.",
         "default": ""
       },
       {
         "path": "review.rules_mode",
         "label": "Rules to verify",
         "type": "select",
-        "required": true,
+        "required": false,
         "choices": [
           {
             "label": "Extract docs and add custom rules",
@@ -75,8 +75,25 @@
         "path_kind": "directory",
         "role": "input",
         "required": false,
+        "requiredModes": [],
         "default": "",
         "description": "Select only when the scope uses independently pinned execution records."
+      },
+      {
+        "path": "inputs.payload.assurance_evidence_sha256",
+        "label": "Case evidence SHA-256",
+        "type": "text",
+        "required": false,
+        "default": "",
+        "description": "Optional digest of the recorded workflow, service, access and test-control evidence."
+      },
+      {
+        "path": "inputs.payload.assurance_basis_sha256",
+        "label": "Report context SHA-256",
+        "type": "text",
+        "required": false,
+        "default": "",
+        "description": "Optional pinned collection methods, source locations and comparison check IDs."
       },
       {
         "path": "outputs.folder_path",
@@ -84,7 +101,8 @@
         "type": "local_path",
         "path_kind": "directory",
         "role": "output",
-        "default": "~/Downloads/code-verifier"
+        "required": false,
+        "default": "~/Downloads/software-verifier-suite"
       },
       {
         "path": "inputs.payload.goal_id",
@@ -121,8 +139,8 @@
     "enabled": true,
     "kind": "output",
     "adapter": "static_html",
-    "title": "Code verification",
-    "description": "One verification report with four specialist tabs and the approved source-rule review.",
+    "title": "Software verification",
+    "description": "Review functional intent, verified defects, integration, authorization and independent test quality.",
     "registration": {
       "artifact": "web/index.html",
       "scope": "run",
@@ -136,22 +154,29 @@
   ],
   "setup_guide": {
     "schema": "otterdesk.setup_guide.v1",
-    "introduction": "Choose a source folder and approve its rules. Four specialists can check behavior, security, compatibility and reliability against the selected scope.",
+    "introduction": "Choose a source folder to start your review. I’ll prepare the rules for your approval, then assign checks to the specialists.",
     "sample": {
       "available": true,
-      "title": "Sample task app",
-      "description": "Use the bundled task app and its short specification. You’ll approve the extracted rules before verification.",
-      "expected_output": "One report with checks for the request schema, TLS settings, wire protocol and timing budget, plus the source evidence for the rules you approved.",
+      "title": "Sample dispatch review",
+      "description": "Review two fictional revisions of a dispatch queue with independently recorded workflow, service, policy and test-control observations.",
+      "expected_output": "A reproduced queue regression, a policy configuration mismatch, the results of the existing tests and lint, and a tested repair for a surviving control.",
       "values": {
-        "inputs.payload.input_folder": "@/examples/sample_inputs",
+        "inputs.payload.input_folder": "@/examples/dispatch_review/comparison",
         "review.rules_mode": "augment",
-        "inputs.payload.verification_scope": "{\"checks\":[{\"id\":\"names\",\"kind\":\"schema_cases\",\"file\":\"input.schema.json\",\"requirement\":\"Accept named requests and reject requests without a name.\",\"cases\":[{\"id\":\"valid-name\",\"input\":{\"name\":\"Ada\"},\"accept\":true},{\"id\":\"missing-name\",\"input\":{},\"accept\":false}]},{\"id\":\"protocol\",\"kind\":\"json_contract\",\"file\":\"wire.json\",\"keys\":{\"protocol\":2},\"requirement\":\"Retain wire protocol 2.\"},{\"id\":\"name-workload\",\"kind\":\"schema_workload\",\"file\":\"input.schema.json\",\"cases\":[{\"id\":\"valid-name\",\"input\":{\"name\":\"Ada\"},\"accept\":true},{\"id\":\"missing-name\",\"input\":{},\"accept\":false}],\"max_p95_ms\":100,\"requirement\":\"The two example validations take at most 100 ms at p95 on this runner.\"}]}"
+        "inputs.payload.verification_scope": "{\"checks\":[{\"id\":\"names\",\"kind\":\"schema_cases\",\"file\":\"input.schema.json\",\"requirement\":\"Accept named requests and reject requests without a name.\",\"cases\":[{\"id\":\"valid-name\",\"input\":{\"name\":\"Ada\"},\"accept\":true},{\"id\":\"missing-name\",\"input\":{},\"accept\":false}]},{\"id\":\"protocol\",\"kind\":\"json_contract\",\"file\":\"wire.json\",\"keys\":{\"protocol\":2},\"requirement\":\"Retain wire protocol 2.\"},{\"id\":\"name-workload\",\"kind\":\"schema_workload\",\"file\":\"input.schema.json\",\"cases\":[{\"id\":\"valid-name\",\"input\":{\"name\":\"Ada\"},\"accept\":true},{\"id\":\"missing-name\",\"input\":{},\"accept\":false}],\"max_p95_ms\":100,\"requirement\":\"The two example validations take at most 100 ms at p95 on this runner.\"},{\"id\":\"existing-units\",\"kind\":\"execution_record\",\"specialist\":\"reliability\",\"requirement\":\"Existing pytest suite on the candidate\",\"target\":\"local-fixture\",\"suite_sha256\":\"693ab4656ba4b26df47b7e2088f8294790d6f7c32f8bf4f523574848ce81ce14\",\"receipt_sha256\":\"24bb3fc64aba79348674375774bd523271e256247d421e543d8c350379a4fff2\",\"cases\":[\"test_display_label\",\"test_short_label\",\"test_label_available\"]},{\"id\":\"existing-lint\",\"kind\":\"execution_record\",\"specialist\":\"reliability\",\"requirement\":\"Ruff E4, E7, E9 and F on the candidate Python files\",\"target\":\"local-fixture\",\"suite_sha256\":\"32ee6d61daf268a7e680e229ba8114370f6d30d96b45884af071ca71483d9298\",\"receipt_sha256\":\"85e5cd21ed8d2352069c1b1a9d26465615b96d7a7eb6a62d25e66418169d564b\",\"cases\":[\"selected-lint-rules\"]},{\"id\":\"blank-label-repair\",\"kind\":\"execution_record\",\"specialist\":\"reliability\",\"requirement\":\"Suggested blank-label assertion accepts the original and detects the control\",\"target\":\"local-fixture\",\"suite_sha256\":\"11938180cc37e538abd4bb534ff1955bb26d0dd61555b96da1fbb73fc559291f\",\"receipt_sha256\":\"6a1eaf91231cd123cf1945b75fe2e99e37471b91493d84aac66391ecf5840cde\",\"cases\":[\"original-label-rejects-blank\",\"detects-accept-blank-control\"]}],\"repository\":\"fixture/dispatch-queue\"}",
+        "inputs.payload.evidence_folder": "@/examples/dispatch_review/evidence",
+        "inputs.payload.assurance_evidence_sha256": "d37e8880cb9d2d5f61c969bf14bccee5c77318f7def816c8db181bdcc501e3ff",
+        "inputs.payload.assurance_basis_sha256": "13c11511c94059997733064519342e8b8afc5c81cc655974dfb37cd833131528"
       }
     },
     "real": {
-      "introduction": "Choose a repository with source and requirements, then choose which rules to extract.",
+      "introduction": "Choose the folder containing the source code and requirements you want reviewed.",
       "values": {
-        "inputs.payload.input_folder": ""
+        "inputs.payload.input_folder": "",
+        "inputs.payload.verification_scope": "",
+        "inputs.payload.evidence_folder": "",
+        "inputs.payload.assurance_evidence_sha256": "",
+        "inputs.payload.assurance_basis_sha256": ""
       }
     },
     "fields": [

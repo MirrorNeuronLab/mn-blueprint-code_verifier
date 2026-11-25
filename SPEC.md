@@ -1,19 +1,30 @@
-# Software verifier specification
+# Software verifier suite specification
+
+## Reviewing the suite report
+
+Choose **Sample dispatch review** for a fictional comparison with recorded evidence, or select your own source. To add case observations, put the independently recorded ledger in **Runner evidence folder** as `<sha256>.json` and enter its digest in **Case evidence SHA-256**. Each specialist receives its own cases. A removed or late specialist leaves its section incomplete. The coordinator retains late replies under their originating review.
+
+The five views use the shared offline report template. The first view shows the release decision, the comparison checks with receipts, and the approved passages each case covers. **Verified defects** counts distinct repeatable behavior. Configuration mismatches and test controls have separate evidence. **Actions** offers **Print all sections**, **Export HTML** and the **Evidence explorer** for detailed checks and source review.
+
+Optionally supply **Report context SHA-256** to identify the collection method, link implementation lines and bind existing tests, lint, CI, AI review or a proposed test repair to the exact run records. Missing comparisons stay unmeasured. Changing an approved requirement invalidates its passage-based case match.
+
+See the [dispatch example](examples/dispatch_review/README.md) for the ledger contract.
 
 Verification opens with developer findings and the specification-to-test evidence for each approved behavior. A prepared Git comparison can be selected by the coordinator or any specialist. Both snapshots use the same protected criteria. A finding distinguishes impact, confidence, inspected locations and remaining uncertainty. The structured report preserves the revision, case history and evidence references.
 
 For tests generated from analysis documents, attach the generator’s requirement-to-test index or review the links against frozen document passages. Bulk CI results retain the entire case inventory and distinguish verified passage links from suite-level provenance. Inspect the specialist tabs for named cases, prompts for unresolved coverage and supporting measurements.
 
-The Software verifier coordinates four independently runnable co-workers. Select a source folder and optionally supply a supervisor-owned verification scope. The coordinator captures the source once, waits for approval of the rule revision, then runs the source review alongside the selected specialist checks. Open the published web report to see the overall verdict and one tab per specialist.
+Hiring Software verifier suite in OtterDesk connects its coordinator and four independently runnable co-workers on one collaboration board. Hiring leaves every co-worker idle. Start the coordinator when you have a source to review. After you approve its rules, each assignment starts a run for the selected specialist. Remove a specialist from Collaboration to leave its checks uncovered. Archiving the coordinator archives the original suite hires. Select a source folder and optionally supply a supervisor-owned verification scope. The coordinator captures the source once, waits for approval of the rule revision, then runs the source review alongside the selected specialist checks. Open the published web report to see the overall verdict and five evidence views.
 
-| Co-worker | What its report covers |
+| Report section | Evidence owner |
 | --- | --- |
-| Functional verifier | Syntax, schema examples, test assertions, and pinned counts and coverage |
-| Security verifier | TLS configuration outside test sources and pinned protection checks |
-| Compatibility verifier | JSON contracts, Python and Node package entry points, and target-specific integration records |
-| Reliability verifier | Schema workloads against a p95 budget and runner timings for pinned recovery checks |
+| Functional intent | Functional verifier compares requirements and observed workflow outcomes. |
+| Verified defects | The coordinator groups matching failures with at least two consistent clean runs of a single case and fixture. |
+| Integration and regression | Compatibility verifier compares service stages on the baseline and candidate. |
+| Security and authorization | Security verifier compares recorded decisions with the approved access policy. |
+| Independent test quality | Reliability verifier inspects test oracles, measured coverage and independent mutation controls. |
 
-The setup sample supplies checks for all four tabs. An unselected specialist has a visible skip reason. Each check records its criterion, attempt history and supporting evidence. For test suites, builds or platforms outside the built-in checks, supply independently pinned execution records through **Runner evidence folder**. The source review can require further investigation even when every selected deterministic check passes.
+The dispatch sample supplies observations for all five sections. An unselected specialist has a visible skip reason. Each check records its criterion, attempt history and supporting evidence. For test suites, builds or platforms outside the built-in checks, supply independently pinned execution records through **Runner evidence folder**. The source review can require further investigation even when every selected deterministic check passes.
 
 For a repair, supply a different candidate and the SHA-256 of the preceding nonpassing report in `repair_of`. Put the report bytes in the evidence folder as `<digest>.json`. The protected criteria stay fixed and up to two candidate revisions are linked. A merge or release scope requires integrated, target-specific evidence. The co-worker publishes the decision and leaves promotion to its owner.
 
@@ -35,14 +46,11 @@ policy cannot resume an old investigation or reuse its approval.
 
 ## Mission and outputs
 
-Execution requires one accelerator with at least 49,152 MiB (48 GiB) of GPU or
-unified accelerator memory, enforced as a hard placement requirement. All phases
-and managed inference share the selected computer's run reservation. A smaller
-computer may submit and stage inputs but cannot own the workflow. In a mini/Spark
-topology, the 24 GiB mini is ineligible and Spark owns the Job. A missing eligible
-computer blocks preparation; it never selects mini or routes managed inference
-outside the reservation. Saved Job definitions retain their owner and requirements;
-existing Jobs on an ineligible computer must be recreated on an eligible owner.
+The coordinator uses the runtime’s shared default model. Its CPU and RAM
+requirements describe the minimum size of the execution computer. Specialists
+need CPU and RAM to inspect their assigned evidence. The coordinator permits
+one outstanding assignment, verifies the published report, then advances to
+the next connected role. An expired reply deadline stops further dispatch.
 
 Given a local repository checkout or plain software folder, read complete captured
 `SPEC.md`/`spec.md`, Markdown, reStructuredText and text documentation; extract
@@ -74,27 +82,16 @@ A skipped, missing or mixed outcome remains explicit. A replaced rule statement
 requires the mapping to be reviewed again. CI evidence never changes the
 static verdict, model evidence or approval state.
 
-Start from sample data explicitly selects the bundled task app and the document
-rule mode. Personal setup starts with an empty source-folder field. Both paths
-require exact rule-list approval.
-In OtterDesk, **Use default** under **Rules to verify** confirms extraction with
-the current document scope and any custom rules. Specification paths and the
-output folder are optional settings.
+**Start from sample data** selects the bundled dispatch comparison and its recorded
+evidence. **Use your own data** asks for one source code folder. Selecting it starts
+the coordinator with the current requirements and any custom rules. Rules mode,
+specification paths, runner evidence and the output folder are optional in
+Configure. The coordinator plans specialist checks after approval of the exact
+rule list on either path.
 
-Capture, extract and rule approval are sequential. Source review and specialist coordination can then run in parallel. Publication requires both results. The coordinator uses a bounded child workflow and the remaining stages use stock domain operations. Domain hooks
-retain code-review policy and approval authority. Core owns routing and completion. Workers consume the native block context directly. Core execution is unchanged;
-the SDK stages folders using this blueprint's declared directory exclusions.
+Core schedules capture, extraction and rule review in order. After approval, source review and specialist coordination can run in parallel. Publication waits for both branches. The Rust coordinator returns bounded child-plan proposals to Core. Each admitted child receives only its mapped work packet, its invocation identity and its declared WIT grants.
 
-Version 3.3.1 sets the HostLocal working directory to the uploaded bundle root
-(`/sandbox/job`, resolved by Core to the invocation workspace). The domain and
-prompt uploads share that root with the SDK-staged component code;
-`runtime/manifest.json` is the execution descriptor, not the Python package root.
-Workers must import those staged components so their identities match the
-compiled definition even when the execution computer has another SDK checkout.
-Activity supervision and the existing block integrity check stay enabled.
-Existing Job definitions require preparation from the updated blueprint before
-a new run uses this working directory. The source-review phases, 48 GiB Job allocation,
-model route, approval and evidence policies are unchanged.
+The SDK stages local folders according to the blueprint exclusions and verifies each declared skill digest before composition. The executor verifies each staged input against its inventory and creates a private WASI invocation directory.
 
 ## Rule contract
 
@@ -171,8 +168,7 @@ default after its configured delay (15 seconds by default). The app uses the
 same Core response, revision, digest and ownership checks as a manual decision.
 Manual review remains available and stops that request's automatic response.
 
-The review specialist uses SDK `human_interactions` to publish blocking approval
-records to Core. OtterDesk's existing conversation interaction stream displays
+The review step calls the run-scoped WIT approval interface to create blocking approval records in Core. OtterDesk's existing conversation interaction stream displays
 them and submits Approve/Reject directly to Core. It does not publish legacy
 file-ledger requests. The step waits for authoritative decisions; the verification
 specialist independently reads them again before creating its model client.
@@ -313,22 +309,11 @@ The publication result returns the SDK `published_files` manifest for report
 JSON/Markdown and the optional page/handle. Native workers export these verified
 bytes for the conversation workspace; optional presentation remains optional.
 
-## Native block composition (3.0.0)
+## Step execution and publication
 
-The five original source-review phases bind directly to their domain implementations through SDK
-`domain_operation` blocks in `extensions/blocks.json`. Each implementation
-consumes `BlockContext`; no legacy phase or context adapters remain. Capture
-resolves the staged input folder from declared local-input configuration and commits its snapshot and source
-files. Downstream phases consume the committed capture reference. Mutable rule
-and review checkpoints stay editable; Core decisions alone grant approval.
+The executable bindings are in `execution.json` and the step graph is in `workflow.json`. Each Rust component reads its step input, calls its declared run services and returns a structured result. Capture commits the source snapshot. Downstream phases consume content-pinned references, and the review step binds the human response to a rules digest and revision.
 
-SDK storage owns path containment and atomic writes. SDK `publish_bundle` owns
-required JSON/Markdown publication, immutable receipts, optional HTML isolation
-and replay verification. This blueprint retains rule extraction, source evidence
-admission, exact approval checks and the specialized evidence panel on the shared
-web report shell. Output selection follows the declared artifact contract and
-uses SDK copying into `MN_JOB_OUTPUT_DIR`; Core owns host delivery. Cancellation
-is checked between document attempts, rule turns and review iterations.
+The publication step commits the report JSON, Markdown and HTML and asks Core to publish their immutable receipts. Core owns run completion and host delivery.
 
 ## Scoped static verification (3.1.0)
 
@@ -381,7 +366,7 @@ identity and approved rules. Old-policy runs require a fresh run and human revie
 historical delivered reports are never overwritten. Runtime, SDK and desktop
 contracts for the original source-review phases continue to apply.
 
-For an authorized delivered run, `python code_verifier/benchmarks/compare_capture.py
+For an authorized delivered run, `python software_verifier_suite/benchmarks/compare_capture.py
 /path/to/run --output-dir /tmp/code-verifier-comparison` audits all prior conclusive
 results and 26 unknowns stratified by origin. It writes confidential comparison
 JSON/Markdown outside that run, comparing source roles and ranked source reads.
@@ -407,3 +392,8 @@ OtterDesk reads `payloads/prompts/conversation.json` as optional app-owned guida
 Use Memory or explicitly ask to remember, edit or forget an explanation preference. This affects Chat wording only; working rules and evidence keep their existing domain controls. The optional `inputs.payload.supervisor_instructions` array is app-managed, never a required setup answer or a new workflow permission.
 
 Use the selected run report and exact source/rule references. Documentation and absence of search hits cannot prove implementation correctness. Only Core approval of the exact rule revision authorizes verification. A conversational yes or saved preference cannot approve, edit or remove rules. Use Review rules and Job knowledge for requirements. Never execute repository code or claim conformance from missing evidence. Existing submitted runs retain their configuration, evidence and approvals. An idle prepared Job may refresh through the existing conditional API without rehiring, resetting memory or mutating an active run.
+
+
+## WASI 0.3 execution
+
+Core schedules every step, owns retries and cancellation, and validates child plans. Each admitted step runs as a Rust WASI 0.3 command under Wasmtime. The SDK composes the six pinned WIT skills at submission. The phase can use the run-scoped artifact, model, approval, and mailbox imports granted in `execution.json`.

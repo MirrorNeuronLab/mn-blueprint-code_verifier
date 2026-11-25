@@ -1,6 +1,7 @@
 """Apply the approved scope to deterministic evidence and attach the source review."""
 from mn_verification_checks_skill import ROLES, digest, snapshot_id, specialist_report
 
+from . import aspects
 from .report_findings import conflicting_ci_rules
 from .specialist_workflow import candidate_sources, missing_report
 
@@ -25,12 +26,17 @@ def consolidate(block, inputs, capture, approval, rules, results, *, ci):
         ref = references.get(role)
         if ref is None:
             selected = any(c["specialist"] == role for c in plan["checks"])
-            views.append(specialist_report(report, role, missing=selected))
-            if selected:
+            received = report.get("delegation", {}).get(role, {}).get("status") == "received"
+            missing = selected and not received
+            view = specialist_report(report, role, missing=missing)
+            measured = report.get("aspects", {}).get(role, {}).get("data")
+            views.append(aspects.with_observations(view, measured))
+            if missing:
                 reasons.append(f"{ROLES[role]} did not return its report.")
             continue
         received = block.read_checkpoint(ref, expected_path=f"specialists/reports/{role}.json")
-        expected = specialist_report(report, role)
+        measured = report.get("aspects", {}).get(role, {}).get("data")
+        expected = aspects.with_observations(specialist_report(report, role), measured)
         if (received["plan_id"] != plan["plan_id"] or received["subject"] != plan["subject"]
                 or received["view"] != expected):
             raise ValueError("Specialist report differs from its verified assignment evidence.")
@@ -48,7 +54,7 @@ def consolidate(block, inputs, capture, approval, rules, results, *, ci):
         reasons.append(f"Source review requires a decision on {len(unresolved)} approved rule(s).")
     if any(row.get("comparison_status") in {"needs_baseline", "needs_change_evidence", "inconclusive"}
            for row in results.values()):
-        reasons.append("The Git comparison lacks evidence to establish the change against the baseline.")
+        reasons.append("The static rule review could not establish the change for every rule on both revisions.")
     for rule_id in sorted(conflicting_ci_rules(ci)):
         reasons.append(f"Imported CI reported a failed or mixed result for approved rule {rule_id}.")
     if not rules["rules"] or rules.get("extraction_gaps"):

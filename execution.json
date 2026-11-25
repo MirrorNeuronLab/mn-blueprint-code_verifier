@@ -2,7 +2,7 @@
   "$schema": "https://mirrorneuron.io/schemas/blueprint/v1/execution.schema.json",
   "type": "batch",
   "mode": "compiled",
-  "job_name": "code-verifier",
+  "job_name": "software-verifier-suite",
   "requirements": {
     "cpu": {
       "min_cores": 1
@@ -12,38 +12,246 @@
     },
     "disk": {
       "min_gb": 1
-    },
-    "gpu": {
-      "min_count": 1,
-      "min_memory_mb": 49152,
-      "memory_operator": ">=",
-      "enforcement": "hard"
     }
   },
   "agents": {
-    "registry": {}
+    "registry": {
+      "admit_scope": {
+        "role": "Verification scope admission",
+        "wit": "admit"
+      },
+      "run_capture_software_sources": {
+        "role": "Capture source and docs",
+        "wit": "coordinator-capture"
+      },
+      "run_extract_software_rules": {
+        "role": "Create editable rules",
+        "wit": "extract-rules"
+      },
+      "run_review_software_rules": {
+        "role": "Review rules",
+        "wit": "review-rules"
+      },
+      "run_verify_software_rules": {
+        "role": "Verify each rule",
+        "wit": "verify-rules"
+      },
+      "run_coordinate_verification": {
+        "role": "Coordinate specialist checks",
+        "wit": "coordinate"
+      },
+      "run_publish_rules_report": {
+        "role": "Publish combined report",
+        "wit": "publish-suite"
+      }
+    }
   },
   "defaults": {
     "worker": {
-      "uses": "mn-agents.worker.python_host@1",
+      "uses": "mn-agents.worker.wasmtime@1",
       "with": {
         "stereotype": [
-          "blueprint_host_worker",
-          "internal_write_worker"
+          "component_worker"
         ],
-        "workdir": "/sandbox/job",
-        "upload_paths": [
-          {
-            "source": "domain",
-            "target": "domain"
+        "wasm_component": "wasm/verifier-phases.wasm",
+        "wit_skills": [
+          "code_search_skill_wit",
+          "comparison_evidence_skill_wit",
+          "folder_files_skill_wit",
+          "static_code_analysis_skill_wit",
+          "verification_checks_skill_wit",
+          "web_report_skill_wit"
+        ]
+      }
+    }
+  },
+  "workers": {
+    "by_step": {
+      "admit_verification_scope": {
+        "with": {
+          "wasm_component": "wasm/verifier.wasm"
+        }
+      },
+      "capture_software_sources": {
+        "with": {
+          "wasm_capabilities": [
+            "artifacts.read",
+            "artifacts.commit"
+          ],
+          "wasm_inputs": "runtime/mn_local_inputs",
+          "wasm_optional_inputs": false,
+          "wasm_config": {
+            "extensions": [
+              ".c",
+              ".cc",
+              ".cfg",
+              ".cjs",
+              ".cpp",
+              ".cs",
+              ".css",
+              ".cts",
+              ".cxx",
+              ".go",
+              ".h",
+              ".hh",
+              ".hpp",
+              ".html",
+              ".hxx",
+              ".ini",
+              ".java",
+              ".js",
+              ".json",
+              ".jsx",
+              ".kt",
+              ".kts",
+              ".md",
+              ".mjs",
+              ".mts",
+              ".php",
+              ".py",
+              ".pyi",
+              ".rb",
+              ".rs",
+              ".rst",
+              ".sh",
+              ".sql",
+              ".swift",
+              ".toml",
+              ".ts",
+              ".tsx",
+              ".txt",
+              ".yaml",
+              ".yml"
+            ]
           },
-          {
-            "source": "prompts",
-            "target": "prompts"
+          "wasm_config_fields": {
+            "review": [
+              "review"
+            ]
           }
-        ],
-        "upload_path": "domain",
-        "upload_as": "domain"
+        }
+      },
+      "extract_software_rules": {
+        "with": {
+          "wasm_capabilities": [
+            "artifacts.read",
+            "artifacts.commit",
+            "model.generate-json"
+          ],
+          "wasm_config_fields": {
+            "review": [
+              "review"
+            ]
+          },
+          "beacon_timeout_ms": 120000
+        }
+      },
+      "review_software_rules": {
+        "with": {
+          "wasm_capabilities": [
+            "artifacts.read",
+            "artifacts.commit",
+            "approvals.request",
+            "approvals.status"
+          ],
+          "wasm_config_fields": {
+            "review": [
+              "review"
+            ]
+          }
+        }
+      },
+      "verify_software_rules": {
+        "with": {
+          "wasm_capabilities": [
+            "artifacts.read",
+            "artifacts.commit",
+            "approvals.status",
+            "model.generate-json"
+          ],
+          "wasm_config_fields": {
+            "review": [
+              "review"
+            ]
+          },
+          "beacon_timeout_ms": 120000
+        }
+      },
+      "coordinate_verification": {
+        "with": {
+          "wasm_capabilities": [
+            "artifacts.read",
+            "artifacts.commit",
+            "approvals.status"
+          ]
+        }
+      },
+      "publish_rules_report": {
+        "with": {
+          "wasm_capabilities": [
+            "artifacts.read",
+            "artifacts.commit",
+            "approvals.status",
+            "artifacts.static-report",
+            "artifacts.publish"
+          ]
+        }
+      },
+      "plan_verification_round": {
+        "with": {
+          "wasm_capabilities": [
+            "artifacts.read",
+            "artifacts.commit"
+          ]
+        }
+      },
+      "inspect_functional": {
+        "with": {
+          "wasm_capabilities": [
+            "artifacts.read",
+            "artifacts.commit",
+            "approvals.status",
+            "mailbox.send",
+            "mailbox.list",
+            "mailbox.attachment"
+          ]
+        }
+      },
+      "inspect_security": {
+        "with": {
+          "wasm_capabilities": [
+            "artifacts.read",
+            "artifacts.commit",
+            "approvals.status",
+            "mailbox.send",
+            "mailbox.list",
+            "mailbox.attachment"
+          ]
+        }
+      },
+      "inspect_compatibility": {
+        "with": {
+          "wasm_capabilities": [
+            "artifacts.read",
+            "artifacts.commit",
+            "approvals.status",
+            "mailbox.send",
+            "mailbox.list",
+            "mailbox.attachment"
+          ]
+        }
+      },
+      "inspect_reliability": {
+        "with": {
+          "wasm_capabilities": [
+            "artifacts.read",
+            "artifacts.commit",
+            "approvals.status",
+            "mailbox.send",
+            "mailbox.list",
+            "mailbox.attachment"
+          ]
+        }
       }
     }
   }

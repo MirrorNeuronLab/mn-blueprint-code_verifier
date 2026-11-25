@@ -1,0 +1,565 @@
+{
+  "schema": "mn.comparison-evidence.v1",
+  "subject": "35f4ab578a7f43d527df8eabb3d9b8c2277cdec5f5b1188f1e73b10d4d0d7815",
+  "baseline_subject": "4ca8e4e2e56ce07ba9ee1bd9bea956a9c21036a7cea07652911bf8db79432a6b",
+  "cases": [
+    {
+      "id": "workflow-retry",
+      "category": "workflow",
+      "claim": "Retrying creates one queue entry",
+      "expected": "1 queue entry",
+      "context": {
+        "workflow": "Dispatch requests"
+      },
+      "source": {
+        "path": "SPEC.md",
+        "line": 3
+      },
+      "fixture": "3be07f9b93905c67eb3119a5febb47776c9cf95b9b669a93725dfb8e6c81a01f",
+      "runs": [
+        {
+          "id": "dispatch-retry-base-1",
+          "revision": "baseline",
+          "clean": true,
+          "observed": "1 queue entry"
+        },
+        {
+          "id": "dispatch-retry-base-2",
+          "revision": "baseline",
+          "clean": true,
+          "observed": "1 queue entry"
+        },
+        {
+          "id": "dispatch-retry-head-1",
+          "revision": "candidate",
+          "clean": true,
+          "observed": "2 queue entries"
+        },
+        {
+          "id": "dispatch-retry-head-2",
+          "revision": "candidate",
+          "clean": true,
+          "observed": "2 queue entries"
+        }
+      ],
+      "severity": "high",
+      "issue": "DISPATCH-17",
+      "remedy": "Deliver one request twice from an empty queue. The final queue must contain exactly one entry."
+    },
+    {
+      "id": "boundary-retry",
+      "category": "boundary",
+      "claim": "Retrying creates one queue entry",
+      "expected": "1 queue entry",
+      "context": {
+        "workflow": "Dispatch requests"
+      },
+      "source": {
+        "path": "SPEC.md",
+        "line": 3
+      },
+      "fixture": "3be07f9b93905c67eb3119a5febb47776c9cf95b9b669a93725dfb8e6c81a01f",
+      "runs": [
+        {
+          "id": "dispatch-retry-base-1",
+          "revision": "baseline",
+          "clean": true,
+          "observed": "1 queue entry",
+          "stages": [
+            {
+              "name": "Producer",
+              "expected": "dispatch-17",
+              "observed": "dispatch-17"
+            },
+            {
+              "name": "Retry transport",
+              "expected": "2",
+              "observed": "2"
+            },
+            {
+              "name": "Queue consumer",
+              "expected": "1 queue entry",
+              "observed": "1 queue entry"
+            }
+          ]
+        },
+        {
+          "id": "dispatch-retry-base-2",
+          "revision": "baseline",
+          "clean": true,
+          "observed": "1 queue entry",
+          "stages": [
+            {
+              "name": "Producer",
+              "expected": "dispatch-17",
+              "observed": "dispatch-17"
+            },
+            {
+              "name": "Retry transport",
+              "expected": "2",
+              "observed": "2"
+            },
+            {
+              "name": "Queue consumer",
+              "expected": "1 queue entry",
+              "observed": "1 queue entry"
+            }
+          ]
+        },
+        {
+          "id": "dispatch-retry-head-1",
+          "revision": "candidate",
+          "clean": true,
+          "observed": "2 queue entries",
+          "stages": [
+            {
+              "name": "Producer",
+              "expected": "dispatch-17",
+              "observed": "dispatch-17"
+            },
+            {
+              "name": "Retry transport",
+              "expected": "2",
+              "observed": "2"
+            },
+            {
+              "name": "Queue consumer",
+              "expected": "1 queue entry",
+              "observed": "2 queue entries"
+            }
+          ]
+        },
+        {
+          "id": "dispatch-retry-head-2",
+          "revision": "candidate",
+          "clean": true,
+          "observed": "2 queue entries",
+          "stages": [
+            {
+              "name": "Producer",
+              "expected": "dispatch-17",
+              "observed": "dispatch-17"
+            },
+            {
+              "name": "Retry transport",
+              "expected": "2",
+              "observed": "2"
+            },
+            {
+              "name": "Queue consumer",
+              "expected": "1 queue entry",
+              "observed": "2 queue entries"
+            }
+          ]
+        }
+      ],
+      "severity": "high",
+      "issue": "DISPATCH-17",
+      "remedy": "Deliver one request twice from an empty queue. The final queue must contain exactly one entry."
+    },
+    {
+      "id": "workflow-new",
+      "category": "workflow",
+      "claim": "A new dispatch reaches the queue once",
+      "expected": "1 queue entry",
+      "context": {
+        "workflow": "Dispatch requests"
+      },
+      "source": {
+        "path": "SPEC.md",
+        "line": 4
+      },
+      "fixture": "3609d0b01fb070480890849718fc341e82564a8357bdc7caa7420f617cf1fd6b",
+      "runs": [
+        {
+          "id": "dispatch-new-base-1",
+          "revision": "baseline",
+          "clean": true,
+          "observed": "1 queue entry"
+        },
+        {
+          "id": "dispatch-new-base-2",
+          "revision": "baseline",
+          "clean": true,
+          "observed": "1 queue entry"
+        },
+        {
+          "id": "dispatch-new-head-1",
+          "revision": "candidate",
+          "clean": true,
+          "observed": "1 queue entry"
+        },
+        {
+          "id": "dispatch-new-head-2",
+          "revision": "candidate",
+          "clean": true,
+          "observed": "1 queue entry"
+        }
+      ],
+      "severity": "high",
+      "remedy": "Deliver one request twice from an empty queue. The final queue must contain exactly one entry."
+    },
+    {
+      "id": "boundary-new",
+      "category": "boundary",
+      "claim": "A new dispatch reaches the queue once",
+      "expected": "1 queue entry",
+      "context": {
+        "workflow": "Dispatch requests"
+      },
+      "source": {
+        "path": "SPEC.md",
+        "line": 4
+      },
+      "fixture": "3609d0b01fb070480890849718fc341e82564a8357bdc7caa7420f617cf1fd6b",
+      "runs": [
+        {
+          "id": "dispatch-new-base-1",
+          "revision": "baseline",
+          "clean": true,
+          "observed": "1 queue entry",
+          "stages": [
+            {
+              "name": "Producer",
+              "expected": "dispatch-17",
+              "observed": "dispatch-17"
+            },
+            {
+              "name": "Retry transport",
+              "expected": "1",
+              "observed": "1"
+            },
+            {
+              "name": "Queue consumer",
+              "expected": "1 queue entry",
+              "observed": "1 queue entry"
+            }
+          ]
+        },
+        {
+          "id": "dispatch-new-base-2",
+          "revision": "baseline",
+          "clean": true,
+          "observed": "1 queue entry",
+          "stages": [
+            {
+              "name": "Producer",
+              "expected": "dispatch-17",
+              "observed": "dispatch-17"
+            },
+            {
+              "name": "Retry transport",
+              "expected": "1",
+              "observed": "1"
+            },
+            {
+              "name": "Queue consumer",
+              "expected": "1 queue entry",
+              "observed": "1 queue entry"
+            }
+          ]
+        },
+        {
+          "id": "dispatch-new-head-1",
+          "revision": "candidate",
+          "clean": true,
+          "observed": "1 queue entry",
+          "stages": [
+            {
+              "name": "Producer",
+              "expected": "dispatch-17",
+              "observed": "dispatch-17"
+            },
+            {
+              "name": "Retry transport",
+              "expected": "1",
+              "observed": "1"
+            },
+            {
+              "name": "Queue consumer",
+              "expected": "1 queue entry",
+              "observed": "1 queue entry"
+            }
+          ]
+        },
+        {
+          "id": "dispatch-new-head-2",
+          "revision": "candidate",
+          "clean": true,
+          "observed": "1 queue entry",
+          "stages": [
+            {
+              "name": "Producer",
+              "expected": "dispatch-17",
+              "observed": "dispatch-17"
+            },
+            {
+              "name": "Retry transport",
+              "expected": "1",
+              "observed": "1"
+            },
+            {
+              "name": "Queue consumer",
+              "expected": "1 queue entry",
+              "observed": "1 queue entry"
+            }
+          ]
+        }
+      ],
+      "severity": "high",
+      "remedy": "Deliver one request twice from an empty queue. The final queue must contain exactly one entry."
+    },
+    {
+      "id": "label-trim",
+      "category": "workflow",
+      "claim": "Trim the label",
+      "expected": "North",
+      "context": {
+        "workflow": "Labels"
+      },
+      "source": {
+        "path": "SPEC.md",
+        "line": 5
+      },
+      "fixture": "89d963c5f2933146bbfc24a6f7a46bb0db9ec11d72bfbd1aca2e8fb7e110734e",
+      "runs": [
+        {
+          "id": "label-trim-base-1",
+          "revision": "baseline",
+          "clean": true,
+          "observed": "North"
+        },
+        {
+          "id": "label-trim-base-2",
+          "revision": "baseline",
+          "clean": true,
+          "observed": "North"
+        },
+        {
+          "id": "label-trim-head-1",
+          "revision": "candidate",
+          "clean": true,
+          "observed": "North"
+        },
+        {
+          "id": "label-trim-head-2",
+          "revision": "candidate",
+          "clean": true,
+          "observed": "North"
+        }
+      ],
+      "severity": "medium"
+    },
+    {
+      "id": "label-blank",
+      "category": "workflow",
+      "claim": "Reject a blank label",
+      "expected": "rejected",
+      "context": {
+        "workflow": "Labels"
+      },
+      "source": {
+        "path": "SPEC.md",
+        "line": 6
+      },
+      "fixture": "a3c262744150362f26bb9dd9390c076695e99750b46a8ade8e2a09e1655de647",
+      "runs": [
+        {
+          "id": "label-blank-base-1",
+          "revision": "baseline",
+          "clean": true,
+          "observed": "rejected"
+        },
+        {
+          "id": "label-blank-base-2",
+          "revision": "baseline",
+          "clean": true,
+          "observed": "rejected"
+        },
+        {
+          "id": "label-blank-head-1",
+          "revision": "candidate",
+          "clean": true,
+          "observed": "rejected"
+        },
+        {
+          "id": "label-blank-head-2",
+          "revision": "candidate",
+          "clean": true,
+          "observed": "rejected"
+        }
+      ],
+      "severity": "medium"
+    },
+    {
+      "id": "reviewer-read",
+      "category": "policy",
+      "claim": "Reviewer read permission",
+      "expected": "allow",
+      "context": {
+        "actor": "reviewer",
+        "action": "read",
+        "resource": "draft"
+      },
+      "source": {
+        "path": "SPEC.md",
+        "line": 7
+      },
+      "fixture": "0db649a2320fb8f37f4bd96474b7be19603d7c1cfab5916d7a2079062dbf4090",
+      "runs": [
+        {
+          "id": "reviewer-read-base-1",
+          "revision": "baseline",
+          "clean": true,
+          "observed": "allow"
+        },
+        {
+          "id": "reviewer-read-head-1",
+          "revision": "candidate",
+          "clean": true,
+          "observed": "allow"
+        }
+      ],
+      "severity": "medium",
+      "remedy": "The reviewer row must deny archiving. The supervisor row must retain its approved permission."
+    },
+    {
+      "id": "reviewer-archive",
+      "category": "policy",
+      "claim": "Reviewer archive permission",
+      "expected": "deny",
+      "context": {
+        "actor": "reviewer",
+        "action": "archive",
+        "resource": "draft"
+      },
+      "source": {
+        "path": "SPEC.md",
+        "line": 8
+      },
+      "fixture": "30363dd1c02161b3c576395d18ef9f0ae21ec5f0fa0be526533ef32682489b37",
+      "runs": [
+        {
+          "id": "reviewer-archive-base-1",
+          "revision": "baseline",
+          "clean": true,
+          "observed": "deny"
+        },
+        {
+          "id": "reviewer-archive-head-1",
+          "revision": "candidate",
+          "clean": true,
+          "observed": "allow"
+        }
+      ],
+      "severity": "medium",
+      "issue": "POLICY-04",
+      "remedy": "The reviewer row must deny archiving. The supervisor row must retain its approved permission."
+    },
+    {
+      "id": "supervisor-archive",
+      "category": "policy",
+      "claim": "Supervisor archive permission",
+      "expected": "allow",
+      "context": {
+        "actor": "supervisor",
+        "action": "archive",
+        "resource": "draft"
+      },
+      "source": {
+        "path": "SPEC.md",
+        "line": 9
+      },
+      "fixture": "614b257d9e8aeb8e7c9eefcc05aa9bababec90b29404be03666f1f3d3334ccf2",
+      "runs": [
+        {
+          "id": "supervisor-archive-base-1",
+          "revision": "baseline",
+          "clean": true,
+          "observed": "allow"
+        },
+        {
+          "id": "supervisor-archive-head-1",
+          "revision": "candidate",
+          "clean": true,
+          "observed": "allow"
+        }
+      ],
+      "severity": "medium",
+      "remedy": "The reviewer row must deny archiving. The supervisor row must retain its approved permission."
+    },
+    {
+      "id": "control-padding",
+      "category": "test_control",
+      "claim": "Existing tests detect the change: keep surrounding whitespace",
+      "expected": "killed",
+      "context": {
+        "test": "test_dispatch.py",
+        "change": "Keep surrounding whitespace"
+      },
+      "source": {
+        "path": "SPEC.md",
+        "line": 5
+      },
+      "fixture": "ab3dc49ec34becdfa4f143948507baf92f6d58050a7331cb15429c55d43f9273",
+      "runs": [
+        {
+          "id": "control-padding-head-1",
+          "revision": "candidate",
+          "clean": true,
+          "original": "passed",
+          "observed": "killed"
+        },
+        {
+          "id": "control-padding-head-2",
+          "revision": "candidate",
+          "clean": true,
+          "original": "passed",
+          "observed": "killed"
+        }
+      ],
+      "severity": "medium"
+    },
+    {
+      "id": "control-blank",
+      "category": "test_control",
+      "claim": "Existing tests detect the change: accept a blank label",
+      "expected": "killed",
+      "context": {
+        "test": "test_dispatch.py",
+        "change": "Accept a blank label"
+      },
+      "source": {
+        "path": "SPEC.md",
+        "line": 6
+      },
+      "fixture": "8782cc28a839b913655c63d3a848839ca2989062e874de4dc7c106d2b3961f05",
+      "runs": [
+        {
+          "id": "control-blank-head-1",
+          "revision": "candidate",
+          "clean": true,
+          "original": "passed",
+          "observed": "survived"
+        },
+        {
+          "id": "control-blank-head-2",
+          "revision": "candidate",
+          "clean": true,
+          "original": "passed",
+          "observed": "survived"
+        }
+      ],
+      "severity": "medium",
+      "remedy": "Add a test that requires a blank display label to raise ValueError."
+    }
+  ],
+  "coverage": {
+    "tool": "Python line trace · existing tests",
+    "paths": [
+      "dispatch.py"
+    ],
+    "covered_lines": 3,
+    "total_lines": 6
+  }
+}
